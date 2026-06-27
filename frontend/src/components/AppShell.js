@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { FiActivity, FiBookOpen, FiCreditCard, FiGrid, FiLogOut, FiMenu, FiMessageCircle, FiMoon, FiRefreshCw, FiSettings, FiSmartphone, FiSun, FiTrendingUp, FiUser, FiUsers, FiX } from "react-icons/fi";
+import { FiActivity, FiBookOpen, FiCalendar, FiCreditCard, FiGrid, FiLogOut, FiMenu, FiMessageCircle, FiMoon, FiRefreshCw, FiSettings, FiSmartphone, FiSun, FiTrendingUp, FiUser, FiUsers, FiX } from "react-icons/fi";
 import BrandLogo from "./BrandLogo";
 import ThemeToggle from "./ThemeToggle";
 
@@ -33,6 +33,7 @@ export default function AppShell({ children }) {
     const items = [
       { to: "/profile", label: "Perfil", icon: <FiUser />, note: "Cuenta y accesos", tone: "profile" },
       { to: "/invite", label: "Equipo", icon: <FiUsers />, note: "Invitaciones y comunidad", tone: "team" },
+      { to: "/prelaunch", label: "Pre-lanzamiento", icon: <FiCalendar />, note: "Bono fundador", tone: "prelaunch" },
       { to: "/support", label: "Soporte", icon: <FiMessageCircle />, note: "Canales oficiales", tone: "support" },
       { to: "/news", label: "Noticias", icon: <FiBookOpen />, note: "Novedades y promociones", tone: "news" },
     ];
@@ -40,7 +41,16 @@ export default function AppShell({ children }) {
     return items;
   }, [user?.is_admin]);
   const walletActive = ["/levels", "/recharge", "/withdraw", "/history", "/transactions"].some((path) => location.pathname.startsWith(path));
-  const menuActive = ["/invite", "/profile", "/admin", "/support", "/news"].some((path) => location.pathname.startsWith(path));
+  const menuActive = ["/invite", "/profile", "/admin", "/support", "/news", "/prelaunch"].some((path) => location.pathname.startsWith(path));
+  const prelaunchButtonVisible = useMemo(() => {
+    const peruDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Lima",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+    return peruDate <= "2026-07-02";
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -132,6 +142,18 @@ export default function AppShell({ children }) {
         </header>
         <div className="content-area">{children}</div>
       </main>
+      {user && prelaunchButtonVisible && !location.pathname.startsWith("/prelaunch") && (
+        <NavLink
+          to="/prelaunch"
+          className="prelaunch-global-fab"
+          title="Pre-lanzamiento"
+          aria-label="Ir a pre-lanzamiento"
+        >
+          <img src="/prelaunch-rocket.png" alt="" aria-hidden="true" />
+          <span>+15</span>
+          <strong>Pre-lanzamiento</strong>
+        </NavLink>
+      )}
       <nav className="mobile-nav mobile-nav-compact" aria-label="Navegación móvil">
         <NavLink to="/home" className={({ isActive }) => isActive ? "active" : ""}>
           <FiGrid /><span>Inicio</span>

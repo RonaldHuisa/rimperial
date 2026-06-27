@@ -12577,3 +12577,2330 @@ b,
   grid-template-columns: 1fr !important;
   gap: 10px !important;
 }
+
+
+/* v1.0.65 — Sección Pre-lanzamiento */
+.prelaunch-page {
+  max-width: 980px;
+  margin-inline: auto;
+  position: relative;
+}
+
+.prelaunch-hero {
+  border: 1px solid rgba(181,156,255,.26);
+  border-radius: 24px;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 86% 24%, rgba(181,156,255,.18), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,.96), rgba(243,238,255,.90));
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+:root[data-theme="dark"] .prelaunch-hero {
+  background:
+    radial-gradient(circle at 86% 24%, rgba(181,156,255,.16), transparent 28%),
+    linear-gradient(135deg, rgba(43,28,69,.96), rgba(31,19,50,.94));
+}
+
+.prelaunch-hero h2 {
+  margin: 6px 0;
+  font-size: clamp(30px, 5vw, 48px);
+  letter-spacing: -.04em;
+  color: var(--text);
+}
+
+.prelaunch-hero p {
+  margin: 0;
+  color: var(--muted);
+  max-width: 520px;
+}
+
+.prelaunch-hero-badge {
+  min-width: 150px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(215,183,122,.30);
+  background: rgba(255,255,255,.66);
+  text-align: center;
+}
+
+:root[data-theme="dark"] .prelaunch-hero-badge {
+  background: rgba(255,255,255,.05);
+}
+
+.prelaunch-hero-badge svg {
+  color: var(--gold-strong);
+  font-size: 28px;
+}
+
+.prelaunch-hero-badge strong {
+  display: block;
+  color: var(--gold-strong);
+  font-size: 23px;
+  margin-top: 6px;
+}
+
+.prelaunch-hero-badge span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.prelaunch-welcome {
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px;
+  background: var(--surface);
+}
+
+.prelaunch-welcome span {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(126,100,232,.12);
+  color: var(--brand);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+
+.prelaunch-welcome h3 {
+  margin: 10px 0 4px;
+  color: var(--text);
+  font-size: 24px;
+}
+
+.prelaunch-welcome p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.prelaunch-notice {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border-radius: 18px;
+  border: 1px solid rgba(239,82,97,.22);
+  background: rgba(239,82,97,.08);
+  padding: 14px;
+  color: var(--text);
+}
+
+.prelaunch-notice svg {
+  color: #ef5261;
+}
+
+.prelaunch-notice strong,
+.prelaunch-notice span {
+  display: block;
+}
+
+.prelaunch-notice span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.prelaunch-progress-card {
+  border-radius: 22px;
+  border: 1px solid rgba(215,183,122,.30);
+  background: linear-gradient(135deg, rgba(215,183,122,.08), rgba(126,100,232,.08)), var(--surface);
+  padding: 18px;
+}
+
+.prelaunch-progress-card > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.prelaunch-progress-card span {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.prelaunch-progress-card strong {
+  color: var(--gold-strong);
+  font-size: 32px;
+}
+
+.prelaunch-progress-card small {
+  color: var(--muted);
+}
+
+.prelaunch-progress-bar {
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(126,100,232,.14);
+  overflow: hidden;
+  margin: 12px 0 8px;
+}
+
+.prelaunch-progress-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand), var(--gold-strong));
+}
+
+.prelaunch-progress-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.prelaunch-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.prelaunch-action-card {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 13px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 16px;
+}
+
+.prelaunch-action-card.checkin {
+  border-color: rgba(215,183,122,.30);
+}
+
+.prelaunch-action-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: rgba(126,100,232,.12);
+  color: var(--brand);
+  font-size: 24px;
+}
+
+.prelaunch-action-card.checkin .prelaunch-action-icon {
+  color: var(--gold-strong);
+  background: rgba(215,183,122,.12);
+}
+
+.prelaunch-action-card.invite .prelaunch-action-icon {
+  color: #2f98ff;
+  background: rgba(47,152,255,.12);
+}
+
+.prelaunch-action-card.tiktok .prelaunch-action-icon {
+  color: #ef5261;
+  background: rgba(239,82,97,.12);
+}
+
+.prelaunch-action-body {
+  min-width: 0;
+}
+
+.prelaunch-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.prelaunch-row-head strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.prelaunch-action-body p {
+  margin: 5px 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.prelaunch-pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  background: rgba(126,100,232,.12);
+  color: var(--brand);
+}
+
+.prelaunch-pill.success {
+  background: rgba(33,185,120,.12);
+  color: #1aa267;
+}
+
+.prelaunch-pill.warning {
+  background: rgba(215,183,122,.15);
+  color: var(--gold-strong);
+}
+
+.prelaunch-pill.danger {
+  background: rgba(239,82,97,.12);
+  color: #ef5261;
+}
+
+.prelaunch-days {
+  display: flex;
+  gap: 7px;
+  margin: 10px 0 12px;
+}
+
+.prelaunch-days span {
+  width: 30px;
+  height: 30px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.prelaunch-days span.done {
+  border-color: rgba(33,185,120,.35);
+  background: rgba(33,185,120,.12);
+  color: #1aa267;
+}
+
+.prelaunch-days span.today {
+  border-color: rgba(215,183,122,.55);
+}
+
+.prelaunch-referral-box,
+.prelaunch-tiktok-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.prelaunch-referral-box span,
+.prelaunch-tiktok-form input {
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface-solid);
+  color: var(--text);
+  padding: 0 12px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.prelaunch-referral-box span {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.prelaunch-referral-box button,
+.prelaunch-tiktok-form button {
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 900;
+  padding: 0 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.prelaunch-rules-card {
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 18px;
+}
+
+.prelaunch-rules-card ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 9px;
+}
+
+.prelaunch-rules-card li {
+  display: flex;
+  gap: 9px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.prelaunch-rules-card li svg {
+  flex: 0 0 auto;
+  color: var(--gold-strong);
+  margin-top: 2px;
+}
+
+.prelaunch-support-card {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 24px;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(215,183,122,.28);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.prelaunch-support-card > svg:first-child {
+  width: 46px;
+  height: 46px;
+  padding: 12px;
+  border-radius: 16px;
+  color: var(--gold-strong);
+  background: rgba(215,183,122,.12);
+}
+
+.prelaunch-support-card strong,
+.prelaunch-support-card span {
+  display: block;
+}
+
+.prelaunch-support-card span {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.prelaunch-floating-checkin {
+  position: fixed;
+  right: max(18px, calc((100vw - 430px) / 2 + 16px));
+  bottom: 92px;
+  z-index: 40;
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(215,183,122,.40);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(243,238,255,.90));
+  color: var(--gold-strong);
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+:root[data-theme="dark"] .prelaunch-floating-checkin {
+  background: linear-gradient(135deg, rgba(43,28,69,.96), rgba(31,19,50,.94));
+}
+
+.prelaunch-floating-checkin span {
+  position: absolute;
+  right: -7px;
+  top: -7px;
+  min-width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--gold-strong);
+  color: #1a1230;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.prelaunch-floating-checkin:not(.available) {
+  opacity: .58;
+}
+
+.prelaunch-toast {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(11, 8, 18, .35);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.prelaunch-toast strong {
+  display: inline-flex;
+  min-height: 50px;
+  align-items: center;
+  border-radius: 18px;
+  background: rgba(14, 9, 24, .92);
+  color: #fff;
+  padding: 0 20px;
+}
+
+.mobile-panel-links .tone-prelaunch { --tone-color: #d7b77a; }
+.mobile-panel-links .tone-prelaunch .mobile-panel-link-icon { color: var(--gold-strong) !important; }
+
+@media (max-width: 760px) {
+  .prelaunch-hero {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .prelaunch-hero h2 {
+    font-size: 30px;
+  }
+
+  .prelaunch-hero p {
+    font-size: 13px;
+  }
+
+  .prelaunch-hero-badge {
+    min-width: 105px;
+    padding: 12px;
+  }
+
+  .prelaunch-hero-badge strong {
+    font-size: 18px;
+  }
+
+  .prelaunch-welcome,
+  .prelaunch-progress-card,
+  .prelaunch-rules-card {
+    border-radius: 19px;
+    padding: 14px;
+  }
+
+  .prelaunch-welcome h3 {
+    font-size: 20px;
+  }
+
+  .prelaunch-action-card {
+    border-radius: 19px;
+    padding: 13px;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 11px;
+  }
+
+  .prelaunch-action-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 15px;
+    font-size: 21px;
+  }
+
+  .prelaunch-row-head strong {
+    font-size: 15.5px;
+  }
+
+  .prelaunch-referral-box,
+  .prelaunch-tiktok-form {
+    grid-template-columns: 1fr;
+  }
+
+  .prelaunch-floating-checkin {
+    right: 18px;
+    bottom: 88px;
+    width: 54px;
+    height: 54px;
+  }
+}
+
+.app-shell.admin-mobile-preview .prelaunch-hero {
+  padding: 16px !important;
+  border-radius: 20px !important;
+}
+
+.app-shell.admin-mobile-preview .prelaunch-hero h2 {
+  font-size: 30px !important;
+}
+
+.app-shell.admin-mobile-preview .prelaunch-action-card {
+  border-radius: 19px !important;
+  padding: 13px !important;
+  grid-template-columns: 44px minmax(0, 1fr) !important;
+  gap: 11px !important;
+}
+
+.app-shell.admin-mobile-preview .prelaunch-action-icon {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 15px !important;
+}
+
+.app-shell.admin-mobile-preview .prelaunch-referral-box,
+.app-shell.admin-mobile-preview .prelaunch-tiktok-form {
+  grid-template-columns: 1fr !important;
+}
+
+
+/* v1.0.66 — Pre-lanzamiento compacto + acceso flotante cohete */
+.prelaunch-global-fab {
+  position: fixed;
+  right: max(18px, calc((100vw - 430px) / 2 + 18px));
+  bottom: 96px;
+  z-index: 45;
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+  border: 1px solid rgba(215,183,122,.42);
+  background:
+    radial-gradient(circle at 70% 18%, rgba(255,255,255,.85), transparent 26%),
+    linear-gradient(135deg, #fff8e6, #f2ebff);
+  color: var(--gold-strong);
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  box-shadow: 0 14px 30px rgba(83,63,124,.16);
+}
+
+:root[data-theme="dark"] .prelaunch-global-fab {
+  background:
+    radial-gradient(circle at 70% 18%, rgba(255,255,255,.10), transparent 26%),
+    linear-gradient(135deg, rgba(54,34,82,.98), rgba(31,19,50,.96));
+  box-shadow: 0 16px 34px rgba(0,0,0,.26);
+}
+
+.prelaunch-global-fab svg {
+  font-size: 25px;
+}
+
+.prelaunch-global-fab span {
+  position: absolute;
+  right: -7px;
+  top: -7px;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--gold-strong);
+  color: #171124;
+  font-size: 11px;
+  font-weight: 950;
+  border: 2px solid var(--bg);
+}
+
+.prelaunch-global-fab::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 24px;
+  border: 1px solid rgba(215,183,122,.24);
+  animation: prelaunchPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes prelaunchPulse {
+  0%, 100% { transform: scale(.96); opacity: .32; }
+  50% { transform: scale(1.08); opacity: .08; }
+}
+
+.prelaunch-page {
+  gap: 12px !important;
+}
+
+.prelaunch-hero {
+  padding: 16px 17px !important;
+  border-radius: 21px !important;
+  min-height: auto !important;
+  align-items: center !important;
+}
+
+.prelaunch-hero h2 {
+  font-size: clamp(26px, 4vw, 36px) !important;
+  line-height: 1.02 !important;
+  margin: 5px 0 7px !important;
+}
+
+.prelaunch-hero p {
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+}
+
+.prelaunch-hero-badge {
+  min-width: 122px !important;
+  padding: 12px 10px !important;
+  border-radius: 18px !important;
+}
+
+.prelaunch-hero-badge svg {
+  font-size: 24px !important;
+}
+
+.prelaunch-hero-badge strong {
+  font-size: 18px !important;
+  margin-top: 4px !important;
+  white-space: nowrap;
+}
+
+.prelaunch-hero-badge span {
+  font-size: 10px !important;
+}
+
+.prelaunch-welcome.compact {
+  padding: 14px 16px !important;
+  border-radius: 19px !important;
+}
+
+.prelaunch-welcome.compact span {
+  padding: 5px 9px !important;
+  font-size: 10px !important;
+}
+
+.prelaunch-welcome.compact h3 {
+  font-size: 21px !important;
+  margin: 9px 0 4px !important;
+}
+
+.prelaunch-welcome.compact p {
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+}
+
+.prelaunch-progress-card.compact {
+  padding: 14px 16px !important;
+  border-radius: 19px !important;
+}
+
+.prelaunch-progress-card.compact > div:first-child {
+  align-items: center !important;
+}
+
+.prelaunch-progress-card.compact span {
+  font-size: 10px !important;
+}
+
+.prelaunch-progress-card.compact strong {
+  font-size: 22px !important;
+  line-height: 1 !important;
+  white-space: nowrap;
+}
+
+.prelaunch-progress-card.compact p {
+  font-size: 12px !important;
+}
+
+.prelaunch-action-card {
+  padding: 13px 14px !important;
+  border-radius: 19px !important;
+  grid-template-columns: 44px minmax(0, 1fr) !important;
+  gap: 11px !important;
+}
+
+.prelaunch-action-icon {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 15px !important;
+  font-size: 21px !important;
+}
+
+.prelaunch-row-head strong {
+  font-size: 16px !important;
+  line-height: 1.1 !important;
+}
+
+.prelaunch-action-body p {
+  font-size: 12px !important;
+  line-height: 1.32 !important;
+  margin: 4px 0 8px !important;
+}
+
+.prelaunch-pill {
+  min-height: 23px !important;
+  padding: 0 8px !important;
+  font-size: 10px !important;
+}
+
+.prelaunch-days {
+  margin: 8px 0 10px !important;
+  gap: 6px !important;
+}
+
+.prelaunch-days span {
+  width: 27px !important;
+  height: 27px !important;
+  border-radius: 10px !important;
+  font-size: 11px !important;
+}
+
+.prelaunch-action-card .primary-btn {
+  min-height: 42px !important;
+  border-radius: 14px !important;
+  padding: 0 14px !important;
+  font-size: 13px !important;
+  width: fit-content;
+}
+
+.prelaunch-referral-box span,
+.prelaunch-tiktok-form input {
+  min-height: 42px !important;
+  border-radius: 13px !important;
+  font-size: 12px !important;
+}
+
+.prelaunch-referral-box button,
+.prelaunch-tiktok-form button {
+  min-height: 42px !important;
+  border-radius: 13px !important;
+  font-size: 13px !important;
+  justify-content: center;
+}
+
+.prelaunch-rules-card {
+  padding: 15px !important;
+  border-radius: 19px !important;
+}
+
+.prelaunch-rules-card .section-title h3 {
+  font-size: 20px !important;
+  margin: 3px 0 10px !important;
+}
+
+.prelaunch-rules-card li {
+  font-size: 13px !important;
+}
+
+.prelaunch-support-card {
+  padding: 13px !important;
+  border-radius: 18px !important;
+}
+
+.prelaunch-support-card > svg:first-child {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+}
+
+@media (max-width: 520px) {
+  .prelaunch-global-fab {
+    width: 54px;
+    height: 54px;
+    right: 18px;
+    bottom: 86px;
+    border-radius: 18px;
+  }
+
+  .prelaunch-hero {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 112px !important;
+    gap: 10px !important;
+  }
+
+  .prelaunch-hero h2 {
+    font-size: 27px !important;
+  }
+
+  .prelaunch-hero p {
+    font-size: 12.5px !important;
+  }
+
+  .prelaunch-hero-badge {
+    min-width: 0 !important;
+    width: 112px !important;
+  }
+
+  .prelaunch-progress-card.compact strong {
+    font-size: 19px !important;
+  }
+
+  .prelaunch-referral-box,
+  .prelaunch-tiktok-form {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.app-shell.admin-mobile-preview .prelaunch-global-fab {
+  right: 18px !important;
+  bottom: 86px !important;
+  width: 54px !important;
+  height: 54px !important;
+}
+
+.app-shell.admin-mobile-preview .prelaunch-hero {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 112px !important;
+  gap: 10px !important;
+}
+
+.app-shell.admin-mobile-preview .prelaunch-hero h2 {
+  font-size: 27px !important;
+}
+
+.app-shell.admin-mobile-preview .prelaunch-hero p {
+  font-size: 12.5px !important;
+}
+
+.app-shell.admin-mobile-preview .prelaunch-hero-badge {
+  width: 112px !important;
+}
+
+
+/* v1.0.67 — Fix icono cohete sin dependencia externa */
+.prelaunch-global-fab svg,
+.prelaunch-hero-badge svg { display: block; }
+
+
+/* v1.0.68 — Cohete PNG + comportamiento móvil/PC */
+.prelaunch-global-fab {
+  width: auto !important;
+  min-width: 58px;
+  height: 58px !important;
+  padding: 0 14px 0 10px !important;
+  grid-template-columns: 38px auto !important;
+  column-gap: 8px !important;
+  border-radius: 20px !important;
+}
+
+.prelaunch-global-fab img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  display: block;
+}
+
+.prelaunch-global-fab > strong {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.prelaunch-global-fab span {
+  right: -7px !important;
+  top: -7px !important;
+}
+
+.prelaunch-hero-badge img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
+/* En PC se convierte en botón flotante textual, no solo icono */
+@media (min-width: 761px) {
+  .prelaunch-global-fab {
+    right: 22px !important;
+    bottom: 26px !important;
+    height: 50px !important;
+    min-width: 174px !important;
+    border-radius: 999px !important;
+    padding: 0 18px 0 12px !important;
+    display: inline-grid !important;
+  }
+
+  .prelaunch-global-fab img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .prelaunch-global-fab span {
+    top: -9px !important;
+    right: -6px !important;
+  }
+}
+
+/* En celular real queda como icono pequeño encima del menú inferior */
+@media (max-width: 760px) {
+  .prelaunch-global-fab {
+    right: 18px !important;
+    bottom: 88px !important;
+    width: 54px !important;
+    min-width: 54px !important;
+    height: 54px !important;
+    padding: 0 !important;
+    border-radius: 18px !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .prelaunch-global-fab img {
+    width: 34px;
+    height: 34px;
+  }
+
+  .prelaunch-global-fab > strong {
+    display: none !important;
+  }
+}
+
+/* En modo celular admin se posiciona dentro del marco Xiaomi, no en la pantalla completa */
+.app-shell.admin-mobile-preview .prelaunch-global-fab {
+  right: calc((100vw - 393px) / 2 + 22px) !important;
+  bottom: 98px !important;
+  width: 54px !important;
+  min-width: 54px !important;
+  height: 54px !important;
+  padding: 0 !important;
+  border-radius: 18px !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  transform: none !important;
+}
+
+.app-shell.admin-mobile-preview .prelaunch-global-fab img {
+  width: 34px !important;
+  height: 34px !important;
+}
+
+.app-shell.admin-mobile-preview .prelaunch-global-fab > strong {
+  display: none !important;
+}
+
+@media (max-width: 420px) {
+  .app-shell.admin-mobile-preview .prelaunch-global-fab {
+    right: 18px !important;
+  }
+}
+
+
+/* v1.0.69 — Pre-lanzamiento más compacto e impactante + cohete visible */
+.prelaunch-v69 {
+  gap: 10px !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-pro {
+  position: relative;
+  overflow: hidden;
+  min-height: 126px !important;
+  padding: 15px !important;
+  border-radius: 22px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 112px !important;
+  gap: 12px !important;
+  align-items: center !important;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(215,183,122,.20), transparent 30%),
+    radial-gradient(circle at 6% 100%, rgba(126,100,232,.13), transparent 32%),
+    linear-gradient(135deg, rgba(255,255,255,.97), rgba(244,239,255,.92)) !important;
+}
+
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-hero-pro {
+  background:
+    radial-gradient(circle at 88% 18%, rgba(215,183,122,.13), transparent 30%),
+    radial-gradient(circle at 6% 100%, rgba(126,100,232,.16), transparent 32%),
+    linear-gradient(135deg, rgba(43,28,69,.97), rgba(31,19,50,.95)) !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-copy {
+  min-width: 0;
+}
+
+.prelaunch-v69 .prelaunch-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.prelaunch-v69 .prelaunch-kicker span,
+.prelaunch-v69 .prelaunch-kicker strong {
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.prelaunch-v69 .prelaunch-kicker span {
+  color: var(--brand);
+  background: rgba(126,100,232,.12);
+}
+
+.prelaunch-v69 .prelaunch-kicker strong {
+  color: #159760;
+  background: rgba(33,185,120,.12);
+}
+
+.prelaunch-v69 .prelaunch-hero h2 {
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  font-size: 25px !important;
+  line-height: 1.02 !important;
+  margin: 0 0 6px !important;
+  letter-spacing: -.035em;
+}
+
+.prelaunch-v69 .prelaunch-hero p {
+  font-size: 12.4px !important;
+  line-height: 1.28 !important;
+  max-width: 230px;
+}
+
+.prelaunch-v69 .prelaunch-hero-badge {
+  width: 112px !important;
+  min-width: 112px !important;
+  padding: 12px 8px !important;
+  border-radius: 18px !important;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.80), rgba(255,248,230,.70)) !important;
+}
+
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-hero-badge {
+  background: rgba(255,255,255,.06) !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-badge img {
+  width: 32px !important;
+  height: 32px !important;
+  margin-bottom: 4px !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-badge strong {
+  display: block;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  white-space: nowrap;
+}
+
+.prelaunch-v69 .prelaunch-hero-badge span {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-card {
+  padding: 13px 14px !important;
+  border-radius: 19px !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-head {
+  display: flex;
+  align-items: center !important;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.prelaunch-v69 .prelaunch-bonus-head span {
+  font-size: 10px !important;
+  letter-spacing: .09em !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-head strong {
+  font-size: 18px !important;
+  line-height: 1 !important;
+  color: var(--gold-strong);
+  white-space: nowrap;
+}
+
+.prelaunch-v69 .prelaunch-progress-bar {
+  height: 8px !important;
+  margin: 10px 0 9px !important;
+}
+
+.prelaunch-v69 .prelaunch-mini-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.prelaunch-v69 .prelaunch-mini-steps span {
+  min-height: 26px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  padding: 0 7px;
+  background: rgba(126,100,232,.10);
+  color: var(--muted);
+  font-size: 9.2px !important;
+  font-weight: 850;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prelaunch-v69 .prelaunch-action-card {
+  padding: 12px !important;
+  border-radius: 18px !important;
+  grid-template-columns: 42px minmax(0, 1fr) !important;
+  gap: 10px !important;
+}
+
+.prelaunch-v69 .prelaunch-action-icon {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+  font-size: 20px !important;
+}
+
+.prelaunch-v69 .prelaunch-row-head {
+  gap: 8px !important;
+}
+
+.prelaunch-v69 .prelaunch-row-head strong {
+  font-size: 15.5px !important;
+  line-height: 1.12 !important;
+}
+
+.prelaunch-v69 .prelaunch-pill {
+  min-height: 22px !important;
+  padding: 0 8px !important;
+  font-size: 9.5px !important;
+}
+
+.prelaunch-v69 .prelaunch-action-body p {
+  font-size: 12px !important;
+  line-height: 1.24 !important;
+  margin: 4px 0 8px !important;
+}
+
+.prelaunch-v69 .prelaunch-days {
+  gap: 5px !important;
+  margin: 8px 0 9px !important;
+}
+
+.prelaunch-v69 .prelaunch-days span {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 10px !important;
+  font-size: 10px !important;
+}
+
+.prelaunch-v69 .prelaunch-action-card .primary-btn {
+  min-height: 39px !important;
+  width: 100% !important;
+  justify-content: center;
+  border-radius: 13px !important;
+}
+
+.prelaunch-v69 .prelaunch-referral-box,
+.prelaunch-v69 .prelaunch-tiktok-form {
+  grid-template-columns: minmax(0, 1fr) 88px !important;
+  gap: 7px !important;
+}
+
+.prelaunch-v69 .prelaunch-referral-box span,
+.prelaunch-v69 .prelaunch-tiktok-form input {
+  min-height: 39px !important;
+  border-radius: 13px !important;
+  font-size: 11.5px !important;
+}
+
+.prelaunch-v69 .prelaunch-referral-box button,
+.prelaunch-v69 .prelaunch-tiktok-form button {
+  min-height: 39px !important;
+  border-radius: 13px !important;
+  font-size: 12px !important;
+  justify-content: center;
+  padding-inline: 8px !important;
+}
+
+.prelaunch-v69 .prelaunch-rules-card {
+  padding: 13px !important;
+  border-radius: 18px !important;
+}
+
+.prelaunch-v69 .prelaunch-rules-card .section-title h3 {
+  font-size: 19px !important;
+}
+
+.prelaunch-v69 .prelaunch-rules-card ul {
+  gap: 7px !important;
+}
+
+.prelaunch-v69 .prelaunch-rules-card li {
+  font-size: 12.4px !important;
+  line-height: 1.28 !important;
+}
+
+.prelaunch-v69 .prelaunch-support-card {
+  padding: 12px !important;
+  border-radius: 17px !important;
+}
+
+.prelaunch-v69 .prelaunch-support-card > svg:first-child {
+  width: 40px !important;
+  height: 40px !important;
+}
+
+.prelaunch-v69 .prelaunch-support-card strong {
+  font-size: 14px;
+}
+
+.prelaunch-v69 .prelaunch-support-card span {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mover el cohete flotante: visible encima del menú y dentro del marco */
+@media (max-width: 760px) {
+  .prelaunch-global-fab {
+    right: 20px !important;
+    bottom: 128px !important;
+    width: 54px !important;
+    min-width: 54px !important;
+    height: 54px !important;
+    padding: 0 !important;
+    border-radius: 18px !important;
+    z-index: 90 !important;
+  }
+
+  .prelaunch-global-fab img {
+    width: 35px !important;
+    height: 35px !important;
+  }
+
+  .prelaunch-global-fab > strong {
+    display: none !important;
+  }
+}
+
+.app-shell.admin-mobile-preview .prelaunch-global-fab {
+  right: calc((100vw - 393px) / 2 + 24px) !important;
+  bottom: 134px !important;
+  width: 54px !important;
+  min-width: 54px !important;
+  height: 54px !important;
+  padding: 0 !important;
+  border-radius: 18px !important;
+  z-index: 90 !important;
+}
+
+.app-shell.admin-mobile-preview .prelaunch-global-fab img {
+  width: 35px !important;
+  height: 35px !important;
+}
+
+.app-shell.admin-mobile-preview .prelaunch-global-fab > strong {
+  display: none !important;
+}
+
+@media (max-width: 430px) {
+  .prelaunch-v69 .prelaunch-hero-pro {
+    grid-template-columns: minmax(0, 1fr) 104px !important;
+    padding: 14px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-hero h2 {
+    font-size: 24px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-hero p {
+    font-size: 12px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-hero-badge {
+    width: 104px !important;
+    min-width: 104px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-bonus-head strong {
+    font-size: 16px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-referral-box,
+  .prelaunch-v69 .prelaunch-tiktok-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell.admin-mobile-preview .prelaunch-global-fab {
+    right: 22px !important;
+    bottom: 134px !important;
+  }
+}
+
+
+/* v1.0.70 — Pre-lanzamiento tech premium */
+.prelaunch-v69 .prelaunch-hero-tech {
+  position: relative;
+  overflow: hidden;
+  min-height: 142px !important;
+  padding: 16px !important;
+  border-radius: 24px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 118px !important;
+  gap: 12px !important;
+  align-items: center !important;
+  border: 1px solid rgba(181,156,255,.28) !important;
+  background:
+    radial-gradient(circle at 84% 50%, rgba(126,100,232,.18), transparent 27%),
+    radial-gradient(circle at 6% 0%, rgba(215,183,122,.14), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,.98), rgba(246,242,255,.94) 52%, rgba(255,249,234,.88)) !important;
+  box-shadow: 0 16px 36px rgba(83,63,124,.10);
+}
+
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-hero-tech {
+  background:
+    radial-gradient(circle at 84% 50%, rgba(126,100,232,.22), transparent 28%),
+    radial-gradient(circle at 8% 0%, rgba(215,183,122,.11), transparent 30%),
+    linear-gradient(135deg, rgba(42,27,68,.98), rgba(28,18,46,.96) 56%, rgba(47,31,74,.92)) !important;
+  box-shadow: 0 18px 40px rgba(0,0,0,.22);
+}
+
+.prelaunch-v69 .prelaunch-hero-tech::before {
+  content: "";
+  position: absolute;
+  inset: 11px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.38);
+  pointer-events: none;
+}
+
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-hero-tech::before {
+  border-color: rgba(255,255,255,.06);
+}
+
+.prelaunch-v69 .prelaunch-hero-tech::after {
+  content: "";
+  position: absolute;
+  left: -22%;
+  right: -22%;
+  bottom: -72px;
+  height: 105px;
+  background:
+    linear-gradient(90deg, transparent, rgba(126,100,232,.24), transparent),
+    repeating-linear-gradient(90deg, rgba(126,100,232,.16) 0 1px, transparent 1px 28px);
+  opacity: .46;
+  transform: rotate(-3deg);
+  pointer-events: none;
+}
+
+.prelaunch-tech-orbit {
+  position: absolute;
+  right: 72px;
+  top: 18px;
+  width: 116px;
+  height: 116px;
+  border-radius: 999px;
+  border: 1px solid rgba(126,100,232,.20);
+  pointer-events: none;
+  opacity: .72;
+}
+
+.prelaunch-tech-orbit span,
+.prelaunch-tech-orbit i {
+  position: absolute;
+  border-radius: inherit;
+  inset: 14px;
+  border: 1px dashed rgba(215,183,122,.34);
+}
+
+.prelaunch-tech-orbit i {
+  inset: 30px;
+  border-style: solid;
+  border-color: rgba(126,100,232,.20);
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-copy,
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge {
+  position: relative;
+  z-index: 2;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-kicker {
+  margin-bottom: 9px;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-kicker span,
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-kicker strong {
+  min-height: 23px;
+  padding-inline: 9px;
+  font-size: 9px;
+  backdrop-filter: blur(10px);
+}
+
+.prelaunch-v69 .prelaunch-hero-tech h2 {
+  max-width: 240px;
+  white-space: normal;
+  font-size: 25px !important;
+  line-height: 1.02 !important;
+  letter-spacing: -.045em;
+  margin: 0 0 7px !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech p {
+  max-width: 236px;
+  font-size: 12.2px !important;
+  line-height: 1.32 !important;
+  color: var(--muted);
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge {
+  width: 118px !important;
+  min-width: 118px !important;
+  min-height: 104px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  padding: 10px 8px !important;
+  border-radius: 22px !important;
+  border: 1px solid rgba(215,183,122,.36) !important;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255,255,255,.72), transparent 36%),
+    linear-gradient(160deg, rgba(255,255,255,.82), rgba(255,247,230,.72)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
+}
+
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge {
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255,255,255,.10), transparent 36%),
+    linear-gradient(160deg, rgba(255,255,255,.08), rgba(215,183,122,.07)) !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge img {
+  width: 34px !important;
+  height: 34px !important;
+  margin-bottom: 4px !important;
+  filter: drop-shadow(0 8px 12px rgba(83,63,124,.15));
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge strong {
+  font-size: 16px !important;
+  white-space: nowrap;
+  line-height: 1 !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge span {
+  font-size: 9.5px !important;
+  letter-spacing: .02em;
+}
+
+/* Bonus card premium */
+.prelaunch-v69 .prelaunch-bonus-tech {
+  position: relative;
+  overflow: hidden;
+  padding: 14px !important;
+  border-radius: 22px !important;
+  border: 1px solid rgba(215,183,122,.28) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(215,183,122,.13), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,.96), rgba(247,243,255,.92)) !important;
+}
+
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-bonus-tech {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(215,183,122,.10), transparent 28%),
+    linear-gradient(135deg, rgba(43,28,69,.96), rgba(31,19,50,.94)) !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-tech::after {
+  content: "";
+  position: absolute;
+  right: -26px;
+  top: -42px;
+  width: 128px;
+  height: 128px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(126,100,232,.13), transparent 66%);
+}
+
+.prelaunch-v69 .prelaunch-bonus-tech > * {
+  position: relative;
+  z-index: 2;
+}
+
+.prelaunch-v69 .prelaunch-bonus-head strong {
+  font-size: 18px !important;
+  color: var(--gold-strong);
+}
+
+.prelaunch-v69 .prelaunch-bonus-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.prelaunch-v69 .prelaunch-bonus-grid span {
+  min-height: 48px;
+  border-radius: 15px;
+  border: 1px solid rgba(126,100,232,.13);
+  background: rgba(126,100,232,.07);
+  display: grid;
+  place-items: center;
+  align-content: center;
+}
+
+.prelaunch-v69 .prelaunch-bonus-grid b {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1;
+}
+
+.prelaunch-v69 .prelaunch-bonus-grid small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+/* Action cards more tech, less plain rectangles */
+.prelaunch-v69 .prelaunch-action-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px !important;
+  border: 1px solid rgba(181,156,255,.18) !important;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.98), rgba(248,246,255,.92)) !important;
+  box-shadow: 0 10px 24px rgba(83,63,124,.07);
+}
+
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-action-card {
+  background:
+    linear-gradient(135deg, rgba(43,28,69,.96), rgba(31,19,50,.94)) !important;
+  box-shadow: 0 12px 28px rgba(0,0,0,.16);
+}
+
+.prelaunch-v69 .prelaunch-action-card::after {
+  content: "";
+  position: absolute;
+  right: -42px;
+  top: -44px;
+  width: 112px;
+  height: 112px;
+  border-radius: 999px;
+  opacity: .11;
+  background: var(--action-glow, var(--brand));
+}
+
+.prelaunch-v69 .prelaunch-action-card.checkin { --action-glow: var(--gold-strong); }
+.prelaunch-v69 .prelaunch-action-card.invite { --action-glow: #2f98ff; }
+.prelaunch-v69 .prelaunch-action-card.tiktok { --action-glow: #ef5261; }
+
+.prelaunch-v69 .prelaunch-action-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+.prelaunch-v69 .prelaunch-action-icon {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45);
+}
+
+.prelaunch-v69 .prelaunch-referral-box span,
+.prelaunch-v69 .prelaunch-tiktok-form input {
+  background: rgba(255,255,255,.72) !important;
+}
+
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-referral-box span,
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-tiktok-form input {
+  background: rgba(255,255,255,.06) !important;
+}
+
+/* Cohete flotante más visible y dentro del marco móvil */
+@media (max-width: 760px) {
+  .prelaunch-global-fab {
+    right: 18px !important;
+    bottom: 142px !important;
+    width: 56px !important;
+    min-width: 56px !important;
+    height: 56px !important;
+    border-radius: 19px !important;
+    z-index: 120 !important;
+    box-shadow: 0 14px 26px rgba(83,63,124,.18) !important;
+  }
+}
+
+.app-shell.admin-mobile-preview .prelaunch-global-fab {
+  right: calc((100vw - 393px) / 2 + 22px) !important;
+  bottom: 146px !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  height: 56px !important;
+  border-radius: 19px !important;
+  z-index: 120 !important;
+}
+
+@media (max-width: 430px) {
+  .prelaunch-v69 .prelaunch-hero-tech {
+    grid-template-columns: minmax(0, 1fr) 106px !important;
+    min-height: 134px !important;
+    padding: 14px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-hero-tech h2 {
+    font-size: 23px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-hero-tech p {
+    font-size: 11.7px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge {
+    width: 106px !important;
+    min-width: 106px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-bonus-head {
+    display: grid !important;
+    gap: 5px;
+  }
+
+  .prelaunch-v69 .prelaunch-bonus-head strong {
+    font-size: 17px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-mini-steps span {
+    font-size: 8.7px !important;
+  }
+
+  .app-shell.admin-mobile-preview .prelaunch-global-fab {
+    right: 22px !important;
+    bottom: 146px !important;
+  }
+}
+
+
+/* v1.0.71 — Pre-lanzamiento limpio, premium y sin elementos circulares raros */
+.prelaunch-v69 {
+  gap: 10px !important;
+}
+
+/* Header limpio: sin órbitas, sin círculos grandes, sin grillas decorativas */
+.prelaunch-v69 .prelaunch-hero-tech {
+  position: relative;
+  overflow: hidden;
+  min-height: 126px !important;
+  padding: 15px !important;
+  border-radius: 22px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 108px !important;
+  gap: 10px !important;
+  align-items: center !important;
+  border: 1px solid rgba(181,156,255,.22) !important;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.98), rgba(248,246,255,.94)) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-hero-tech {
+  background:
+    linear-gradient(135deg, rgba(43,28,69,.97), rgba(31,19,50,.95)) !important;
+  border-color: rgba(181,156,255,.18) !important;
+  box-shadow: none !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech::before,
+.prelaunch-v69 .prelaunch-hero-tech::after,
+.prelaunch-v69 .prelaunch-tech-orbit {
+  display: none !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-copy,
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge {
+  position: relative;
+  z-index: 2;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-kicker {
+  margin: 0 0 8px !important;
+  gap: 6px !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-kicker span,
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-kicker strong {
+  min-height: 21px !important;
+  padding: 0 8px !important;
+  font-size: 8.7px !important;
+  letter-spacing: .075em !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech h2 {
+  max-width: 190px !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  font-size: 24px !important;
+  line-height: 1.02 !important;
+  letter-spacing: -.035em !important;
+  margin: 0 0 7px !important;
+  color: var(--text) !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech p {
+  max-width: 208px !important;
+  margin: 0 !important;
+  font-size: 11.8px !important;
+  line-height: 1.28 !important;
+  color: var(--muted) !important;
+}
+
+/* Card del cohete más ordenada, sin competir con el título */
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge {
+  width: 108px !important;
+  min-width: 108px !important;
+  min-height: 92px !important;
+  padding: 10px 7px !important;
+  border-radius: 18px !important;
+  display: grid !important;
+  align-content: center !important;
+  justify-items: center !important;
+  border: 1px solid rgba(215,183,122,.30) !important;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.88), rgba(255,250,238,.76)) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge {
+  background: rgba(255,255,255,.06) !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge img {
+  width: 30px !important;
+  height: 30px !important;
+  margin: 0 0 5px !important;
+  filter: none !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge strong {
+  display: block !important;
+  font-size: 15px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  color: var(--gold-strong) !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge span {
+  display: block !important;
+  margin-top: 4px !important;
+  font-size: 9px !important;
+  color: var(--muted) !important;
+  font-weight: 900 !important;
+}
+
+/* Progreso: menos decorativo, más administrativo/premium */
+.prelaunch-v69 .prelaunch-bonus-tech {
+  position: relative;
+  overflow: hidden;
+  padding: 13px 14px !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(215,183,122,.26) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-tech::after {
+  display: none !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-head span {
+  font-size: 9.6px !important;
+  letter-spacing: .09em !important;
+  line-height: 1.05 !important;
+  max-width: 84px !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-head strong {
+  font-size: 17px !important;
+  line-height: 1 !important;
+  color: var(--gold-strong) !important;
+  white-space: nowrap !important;
+  text-align: right !important;
+}
+
+.prelaunch-v69 .prelaunch-progress-bar {
+  height: 8px !important;
+  margin: 10px 0 9px !important;
+  background: rgba(126,100,232,.14) !important;
+}
+
+.prelaunch-v69 .prelaunch-progress-bar i {
+  background: linear-gradient(90deg, var(--gold-strong), var(--brand)) !important;
+}
+
+.prelaunch-v69 .prelaunch-mini-steps {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+}
+
+.prelaunch-v69 .prelaunch-mini-steps span {
+  min-height: 25px !important;
+  padding: 0 6px !important;
+  border-radius: 999px !important;
+  background: rgba(126,100,232,.10) !important;
+  color: var(--muted) !important;
+  font-size: 8.6px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  margin-top: 9px !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-grid span {
+  min-height: 42px !important;
+  border-radius: 14px !important;
+  border: 1px solid rgba(181,156,255,.18) !important;
+  background: rgba(126,100,232,.055) !important;
+  display: grid !important;
+  place-items: center !important;
+  align-content: center !important;
+  box-shadow: none !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-grid b {
+  font-size: 12px !important;
+  line-height: 1 !important;
+  color: var(--text) !important;
+  white-space: nowrap !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-grid small {
+  margin-top: 3px !important;
+  font-size: 8.4px !important;
+  line-height: 1 !important;
+  color: var(--muted) !important;
+  font-weight: 900 !important;
+  letter-spacing: .04em !important;
+}
+
+/* Cards de acciones: limpias, alineadas y compactas */
+.prelaunch-v69 .prelaunch-action-card {
+  position: relative;
+  overflow: hidden;
+  padding: 12px !important;
+  border-radius: 20px !important;
+  grid-template-columns: 42px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  border: 1px solid var(--line) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+.prelaunch-v69 .prelaunch-action-card::after {
+  display: none !important;
+}
+
+.prelaunch-v69 .prelaunch-action-icon {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+  font-size: 20px !important;
+  box-shadow: none !important;
+}
+
+.prelaunch-v69 .prelaunch-row-head {
+  gap: 8px !important;
+  align-items: center !important;
+}
+
+.prelaunch-v69 .prelaunch-row-head strong {
+  font-size: 15.2px !important;
+  line-height: 1.1 !important;
+  color: var(--text) !important;
+}
+
+.prelaunch-v69 .prelaunch-pill {
+  min-height: 22px !important;
+  padding: 0 8px !important;
+  font-size: 9.2px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.prelaunch-v69 .prelaunch-action-body p {
+  font-size: 11.8px !important;
+  line-height: 1.25 !important;
+  margin: 4px 0 8px !important;
+  color: var(--muted) !important;
+}
+
+.prelaunch-v69 .prelaunch-days {
+  gap: 5px !important;
+  margin: 8px 0 9px !important;
+}
+
+.prelaunch-v69 .prelaunch-days span {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 10px !important;
+  font-size: 10px !important;
+}
+
+.prelaunch-v69 .prelaunch-action-card .primary-btn {
+  width: 100% !important;
+  min-height: 39px !important;
+  border-radius: 13px !important;
+  justify-content: center !important;
+  font-size: 12.6px !important;
+}
+
+.prelaunch-v69 .prelaunch-referral-box,
+.prelaunch-v69 .prelaunch-tiktok-form {
+  grid-template-columns: minmax(0, 1fr) 84px !important;
+  gap: 7px !important;
+}
+
+.prelaunch-v69 .prelaunch-referral-box span,
+.prelaunch-v69 .prelaunch-tiktok-form input {
+  min-height: 39px !important;
+  border-radius: 13px !important;
+  font-size: 11px !important;
+  background: var(--surface-solid) !important;
+}
+
+.prelaunch-v69 .prelaunch-referral-box button,
+.prelaunch-v69 .prelaunch-tiktok-form button {
+  min-height: 39px !important;
+  border-radius: 13px !important;
+  font-size: 11.8px !important;
+  justify-content: center !important;
+  padding-inline: 8px !important;
+}
+
+/* Reglas y soporte más discretos */
+.prelaunch-v69 .prelaunch-rules-card,
+.prelaunch-v69 .prelaunch-support-card {
+  box-shadow: none !important;
+}
+
+@media (max-width: 430px) {
+  .prelaunch-v69 .prelaunch-hero-tech {
+    grid-template-columns: minmax(0, 1fr) 98px !important;
+    gap: 9px !important;
+    min-height: 122px !important;
+    padding: 13px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-hero-tech h2 {
+    font-size: 23px !important;
+    max-width: 165px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-hero-tech p {
+    font-size: 11.4px !important;
+    max-width: 174px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge {
+    width: 98px !important;
+    min-width: 98px !important;
+    min-height: 88px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge strong {
+    font-size: 14px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-bonus-head {
+    display: grid !important;
+    grid-template-columns: 78px minmax(0, 1fr) !important;
+  }
+
+  .prelaunch-v69 .prelaunch-bonus-head strong {
+    font-size: 16px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-mini-steps span {
+    font-size: 8.1px !important;
+  }
+
+  .prelaunch-v69 .prelaunch-referral-box,
+  .prelaunch-v69 .prelaunch-tiktok-form {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* v1.0.72 — Pre-lanzamiento recto, limpio y profesional */
+.prelaunch-v69 {
+  gap: 10px !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech {
+  min-height: 116px !important;
+  padding: 13px !important;
+  border-radius: 14px !important;
+  grid-template-columns: minmax(0, 1fr) 94px !important;
+  gap: 9px !important;
+  border-color: rgba(181,156,255,.20) !important;
+  background: linear-gradient(135deg, rgba(255,255,255,.98), rgba(248,246,255,.94)) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-hero-tech {
+  background: linear-gradient(135deg, rgba(43,28,69,.97), rgba(31,19,50,.95)) !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech::before,
+.prelaunch-v69 .prelaunch-hero-tech::after,
+.prelaunch-v69 .prelaunch-tech-orbit,
+.prelaunch-v69 .prelaunch-action-card::after,
+.prelaunch-v69 .prelaunch-bonus-tech::after {
+  display: none !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-kicker {
+  gap: 5px !important;
+  margin-bottom: 7px !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-kicker span,
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-kicker strong {
+  min-height: 20px !important;
+  padding: 0 7px !important;
+  border-radius: 7px !important;
+  font-size: 9px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech h2 {
+  max-width: 158px !important;
+  font-size: 22px !important;
+  line-height: 1.03 !important;
+  letter-spacing: -.02em !important;
+  font-weight: 720 !important;
+  margin: 0 0 6px !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech p {
+  max-width: 170px !important;
+  margin: 0 !important;
+  font-size: 11.3px !important;
+  line-height: 1.28 !important;
+  font-weight: 400 !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge {
+  width: 94px !important;
+  min-width: 94px !important;
+  min-height: 82px !important;
+  padding: 9px 6px !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(215,183,122,.28) !important;
+  background: rgba(255,255,255,.72) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme="dark"] .prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge {
+  background: rgba(255,255,255,.06) !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge img {
+  width: 28px !important;
+  height: 28px !important;
+  margin-bottom: 5px !important;
+  filter: none !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge strong {
+  font-size: 13px !important;
+  font-weight: 720 !important;
+  white-space: nowrap !important;
+}
+
+.prelaunch-v69 .prelaunch-hero-tech .prelaunch-hero-badge span {
+  font-size: 9px !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+}
+
+/* Progreso con color uniforme */
+.prelaunch-v69 .prelaunch-bonus-tech {
+  border-radius: 12px !important;
+  padding: 12px !important;
+  border: 1px solid rgba(215,183,122,.24) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-head {
+  display: grid !important;
+  grid-template-columns: 76px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-head span {
+  max-width: 76px !important;
+  font-size: 9.5px !important;
+  line-height: 1.1 !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-head strong {
+  font-size: 15.5px !important;
+  line-height: 1 !important;
+  font-weight: 720 !important;
+  color: var(--gold-strong) !important;
+  white-space: nowrap !important;
+  text-align: right !important;
+}
+
+.prelaunch-v69 .prelaunch-progress-bar {
+  height: 7px !important;
+  margin: 9px 0 8px !important;
+  background: rgba(33,185,120,.14) !important;
+}
+
+.prelaunch-v69 .prelaunch-progress-bar i {
+  background: #21b978 !important;
+}
+
+.prelaunch-v69 .prelaunch-mini-steps {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+}
+
+.prelaunch-v69 .prelaunch-mini-steps span {
+  min-height: 24px !important;
+  border-radius: 7px !important;
+  background: rgba(126,100,232,.08) !important;
+  color: var(--muted) !important;
+  font-size: 8px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-grid {
+  gap: 5px !important;
+  margin-top: 8px !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-grid span {
+  min-height: 38px !important;
+  border-radius: 8px !important;
+  background: rgba(126,100,232,.04) !important;
+  border: 1px solid rgba(181,156,255,.18) !important;
+  box-shadow: none !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-grid b {
+  font-size: 12px !important;
+  font-weight: 720 !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-grid small {
+  margin-top: 3px !important;
+  font-size: 8.4px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+/* Cards y botones menos curveados */
+.prelaunch-v69 .prelaunch-action-card {
+  border-radius: 12px !important;
+  padding: 12px !important;
+  grid-template-columns: 40px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  border: 1px solid var(--line) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+.prelaunch-v69 .prelaunch-action-icon {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 9px !important;
+  font-size: 19px !important;
+  box-shadow: none !important;
+}
+
+.prelaunch-v69 .prelaunch-row-head strong {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  line-height: 1.1 !important;
+}
+
+.prelaunch-v69 .prelaunch-pill {
+  min-height: 22px !important;
+  padding: 0 8px !important;
+  border-radius: 7px !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+}
+
+.prelaunch-v69 .prelaunch-action-body p {
+  font-size: 11.6px !important;
+  line-height: 1.25 !important;
+  font-weight: 400 !important;
+  margin: 4px 0 8px !important;
+}
+
+.prelaunch-v69 .prelaunch-days span {
+  width: 25px !important;
+  height: 25px !important;
+  border-radius: 7px !important;
+  font-weight: 600 !important;
+}
+
+.prelaunch-v69 .prelaunch-action-card .primary-btn {
+  width: 100% !important;
+  min-height: 38px !important;
+  border-radius: 9px !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  justify-content: center !important;
+}
+
+.prelaunch-v69 .prelaunch-referral-box,
+.prelaunch-v69 .prelaunch-tiktok-form {
+  grid-template-columns: 1fr !important;
+  gap: 7px !important;
+}
+
+.prelaunch-v69 .prelaunch-referral-box span,
+.prelaunch-v69 .prelaunch-tiktok-form input {
+  min-height: 38px !important;
+  border-radius: 9px !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  background: var(--surface-solid) !important;
+}
+
+.prelaunch-v69 .prelaunch-referral-box button,
+.prelaunch-v69 .prelaunch-tiktok-form button {
+  min-height: 38px !important;
+  border-radius: 9px !important;
+  font-size: 11.8px !important;
+  font-weight: 700 !important;
+  justify-content: center !important;
+}
+
+.prelaunch-v69 .prelaunch-rules-card,
+.prelaunch-v69 .prelaunch-support-card {
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+.prelaunch-v69 .section-title span,
+.prelaunch-v69 .prelaunch-rules-card .section-title span {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-weight: 600 !important;
+}
