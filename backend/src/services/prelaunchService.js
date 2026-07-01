@@ -6,8 +6,8 @@ const DEFAULT_CONFIG = {
   maxCheckinDays: 5,
   checkinRewardUsdt: 1,
   inviteRewardUsdt: 1,
-  tiktokRewardUsdt: 3,
-  maxBonusUsdt: 9,
+  tiktokRewardUsdt: 4,
+  maxBonusUsdt: 10,
   blockFinancialActions: true,
 };
 
@@ -60,8 +60,8 @@ async function ensurePrelaunchSchema(clientOrPool = pool) {
       max_checkin_days INTEGER NOT NULL DEFAULT 5,
       checkin_reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 1,
       invite_reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 1,
-      tiktok_reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 3,
-      max_bonus_usdt NUMERIC(38,18) NOT NULL DEFAULT 9,
+      tiktok_reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 4,
+      max_bonus_usdt NUMERIC(38,18) NOT NULL DEFAULT 10,
       block_financial_actions BOOLEAN NOT NULL DEFAULT TRUE,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
@@ -81,8 +81,8 @@ async function ensurePrelaunchSchema(clientOrPool = pool) {
       max_checkin_days = 5,
       checkin_reward_usdt = 1,
       invite_reward_usdt = 1,
-      tiktok_reward_usdt = 3,
-      max_bonus_usdt = 9,
+      tiktok_reward_usdt = 4,
+      max_bonus_usdt = 10,
       block_financial_actions = TRUE,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = 1
@@ -90,8 +90,8 @@ async function ensurePrelaunchSchema(clientOrPool = pool) {
 
   await clientOrPool.query(`
     UPDATE prelaunch_tiktok_submissions
-    SET reward_usdt = 3, updated_at = CURRENT_TIMESTAMP
-    WHERE status = 'pending' AND reward_usdt <> 3
+    SET reward_usdt = 4, updated_at = CURRENT_TIMESTAMP
+    WHERE status = 'pending' AND reward_usdt <> 4
   `).catch(() => {});
 
   await clientOrPool.query(`
@@ -127,7 +127,7 @@ async function ensurePrelaunchSchema(clientOrPool = pool) {
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       tiktok_url TEXT NOT NULL,
       status VARCHAR(30) NOT NULL DEFAULT 'pending',
-      reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 3,
+      reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 4,
       admin_note TEXT,
       reviewed_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
