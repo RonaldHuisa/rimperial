@@ -997,7 +997,6 @@ function SecurityPanel() {
   return <div className="page-stack"><div className="metric-grid admin-metrics"><MetricCard icon={<FiAlertTriangle />} label="Sospechosos" value={compact(data?.suspiciousUsers?.length)} /><MetricCard icon={<FiShield />} label="Baneados" value={compact(data?.bannedUsers?.length)} /><MetricCard icon={<FiDatabase />} label="IPs repetidas" value={compact(data?.ipGroups?.length)} /><MetricCard icon={<FiActivity />} label="Eventos" value={compact(data?.events?.length)} /></div><div className="two-columns admin-two"><div className="panel-card"><div className="section-title"><span>IPs</span><h3>Registros repetidos</h3></div><PaginatedAdminTable pageSize={10} rows={data?.ipGroups || []} columns={[{ key: "ip_address", label: "IP" }, { key: "accounts", label: "Cuentas" }]} /></div><div className="panel-card"><div className="section-title"><span>Eventos</span><h3>Últimos registros</h3></div><PaginatedAdminTable pageSize={10} rows={data?.events || []} columns={[{ key: "event_type", label: "Evento" }, { key: "user_email", label: "Usuario" }, { key: "ip_address", label: "IP" }, { key: "created_at", label: "Fecha", render: (r) => shortDate(r.created_at) }]} /></div></div></div>;
 }
 
-export default 
 function CreditPointsPanel() {
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, limit: ADMIN_PAGE_SIZE });
@@ -1147,7 +1146,7 @@ function CreditPointsPanel() {
 }
 
 
-function AdminPanel() {
+export default function AdminPanel() {
   const location = useLocation();
   const initialTab = location.pathname.split("/")[2] || "overview";
   const [activeTab, setActiveTab] = useState(tabs.some((t) => t.key === initialTab) ? initialTab : "overview");

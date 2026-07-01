@@ -14938,3 +14938,27 @@ b,
 .compact-title {
   margin-top: 18px;
 }
+
+
+/* v1.0.77 — Restaurar panel admin completo + pestañas visibles */
+.admin-tabs {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.admin-tabs button {
+  white-space: nowrap;
+}
+
+.app-shell.admin-mobile-preview .admin-tabs,
+@media (max-width: 640px) {
+  .admin-tabs {
+    display: flex;
+    gap: 8px;
+    padding-bottom: 4px;
+  }
+
+  .admin-tabs button {
+    flex: 0 0 auto;
+  }
+}
