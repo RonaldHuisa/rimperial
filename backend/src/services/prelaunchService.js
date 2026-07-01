@@ -2,12 +2,12 @@ const pool = require("../config/db");
 
 const DEFAULT_CONFIG = {
   isActive: true,
-  cutoffDate: "2026-07-02",
+  cutoffDate: "2026-07-07",
   maxCheckinDays: 5,
   checkinRewardUsdt: 1,
-  inviteRewardUsdt: 5,
-  tiktokRewardUsdt: 5,
-  maxBonusUsdt: 15,
+  inviteRewardUsdt: 1,
+  tiktokRewardUsdt: 3,
+  maxBonusUsdt: 9,
   blockFinancialActions: true,
 };
 
@@ -56,12 +56,12 @@ async function ensurePrelaunchSchema(clientOrPool = pool) {
     CREATE TABLE IF NOT EXISTS prelaunch_config (
       id INTEGER PRIMARY KEY DEFAULT 1,
       is_active BOOLEAN NOT NULL DEFAULT TRUE,
-      cutoff_date DATE NOT NULL DEFAULT DATE '2026-07-02',
+      cutoff_date DATE NOT NULL DEFAULT DATE '2026-07-07',
       max_checkin_days INTEGER NOT NULL DEFAULT 5,
       checkin_reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 1,
-      invite_reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 5,
-      tiktok_reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 5,
-      max_bonus_usdt NUMERIC(38,18) NOT NULL DEFAULT 15,
+      invite_reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 1,
+      tiktok_reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 3,
+      max_bonus_usdt NUMERIC(38,18) NOT NULL DEFAULT 9,
       block_financial_actions BOOLEAN NOT NULL DEFAULT TRUE,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
@@ -72,6 +72,27 @@ async function ensurePrelaunchSchema(clientOrPool = pool) {
     VALUES (1)
     ON CONFLICT (id) DO NOTHING
   `);
+
+  await clientOrPool.query(`
+    UPDATE prelaunch_config
+    SET
+      is_active = TRUE,
+      cutoff_date = DATE '2026-07-07',
+      max_checkin_days = 5,
+      checkin_reward_usdt = 1,
+      invite_reward_usdt = 1,
+      tiktok_reward_usdt = 3,
+      max_bonus_usdt = 9,
+      block_financial_actions = TRUE,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = 1
+  `);
+
+  await clientOrPool.query(`
+    UPDATE prelaunch_tiktok_submissions
+    SET reward_usdt = 3, updated_at = CURRENT_TIMESTAMP
+    WHERE status = 'pending' AND reward_usdt <> 3
+  `).catch(() => {});
 
   await clientOrPool.query(`
     CREATE TABLE IF NOT EXISTS prelaunch_checkins (
@@ -91,7 +112,7 @@ async function ensurePrelaunchSchema(clientOrPool = pool) {
       id SERIAL PRIMARY KEY,
       sponsor_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       invited_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      amount_usdt NUMERIC(38,18) NOT NULL DEFAULT 5,
+      amount_usdt NUMERIC(38,18) NOT NULL DEFAULT 1,
       status VARCHAR(30) NOT NULL DEFAULT 'credited',
       credited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -106,7 +127,7 @@ async function ensurePrelaunchSchema(clientOrPool = pool) {
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       tiktok_url TEXT NOT NULL,
       status VARCHAR(30) NOT NULL DEFAULT 'pending',
-      reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 5,
+      reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 3,
       admin_note TEXT,
       reviewed_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -239,8 +260,8 @@ async function getPrelaunchStatus(userId, clientOrPool = pool, options = {}) {
 
   const registrationPeru = getPeruDateString(new Date(user.created_at));
   const daysSinceRegistration = diffDays(registrationPeru, todayPeru);
-  const eligibleByDate = registrationPeru <= config.cutoffDate;
-  const withinCheckinWindow = daysSinceRegistration >= 0 && daysSinceRegistration < config.maxCheckinDays;
+  const eligibleByDate = registrationPeru < config.cutoffDate;
+  const withinCheckinWindow = todayPeru <= config.cutoffDate;
   const canParticipate = Boolean(config.isActive && eligibleByDate);
 
   const [checkinsResult, referralRewardResult, tiktokResult, validInvitesResult] = await Promise.all([
@@ -305,12 +326,12 @@ async function getPrelaunchStatus(userId, clientOrPool = pool, options = {}) {
       rewardUsdt: config.checkinRewardUsdt,
       earnedUsdt: checkinEarned,
       days: Array.from({ length: config.maxCheckinDays }, (_, index) => {
-        const date = new Date(parseDateOnly(registrationPeru).getTime() + index * 86400000).toISOString().slice(0, 10);
+        const recorded = checkins[index];
         return {
           day: index + 1,
-          date,
-          done: doneDates.has(date),
-          isToday: date === todayPeru,
+          date: recorded ? String(recorded.checkin_date).slice(0, 10) : null,
+          done: Boolean(recorded),
+          isToday: recorded ? String(recorded.checkin_date).slice(0, 10) === todayPeru : false,
         };
       }),
     },

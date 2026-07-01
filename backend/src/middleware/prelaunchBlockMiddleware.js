@@ -5,7 +5,7 @@ async function blockFinancialActionsDuringPrelaunch(req, res, next) {
     const blocked = await isPrelaunchFinancialActionsBlocked();
     if (!blocked) return next();
     return res.status(423).json({
-      message: "Disponible en el lanzamiento oficial. Mientras tanto, acumula beneficios de fundador.",
+      message: "Recargas, retiros y compra de planes estarán disponibles en el lanzamiento oficial. La pasantía y tareas IA siguen activas.",
       code: "PRELAUNCH_ACTIVE",
     });
   } catch (error) {

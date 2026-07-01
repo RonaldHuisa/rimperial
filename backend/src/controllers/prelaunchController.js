@@ -44,7 +44,7 @@ async function checkin(req, res) {
 
     if (!status.withinCheckinWindow) {
       await client.query("ROLLBACK");
-      return res.status(400).json({ message: "El check-in solo está disponible durante tus primeros 5 días." });
+      return res.status(400).json({ message: "El check-in está disponible dentro del plazo de pre-lanzamiento." });
     }
 
     if (status.checkin.todayDone) {
@@ -244,7 +244,7 @@ async function adminReviewTikTok(req, res) {
         amount: Number(submission.reward_usdt || 5),
         type: "prelaunch_tiktok",
         title: "Bono pre-lanzamiento TikTok",
-        description: "TikTok aprobado por administrador.",
+        description: "TikTok promocional aprobado por administrador.",
         referenceType: "prelaunch_tiktok_submission",
         referenceId: submissionId,
         metadata: { tiktokUrl: submission.tiktok_url },

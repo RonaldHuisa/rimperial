@@ -87,7 +87,7 @@ app.use("/api", (req, res, next) => {
   next();
 });
 
-app.get("/", (req, res) => res.json({ message: "Backend Royal Imperial AI funcionando correctamente.", version: "1.0.73" }));
+app.get("/", (req, res) => res.json({ message: "Backend Royal Imperial AI funcionando correctamente.", version: "1.0.74" }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/wallet", walletRoutes);
