@@ -218,8 +218,16 @@ async function listAdminUsers(req, res) {
     const where = [];
     const params = [];
     if (search) {
-      params.push(`%${search.toLowerCase()}%`);
-      where.push(`LOWER(u.email) LIKE $${params.length}`);
+      const loweredSearch = search.toLowerCase();
+      params.push(`%${loweredSearch}%`);
+      const likeParam = `$${params.length}`;
+      params.push(search);
+      const exactParam = `$${params.length}`;
+      where.push(`(
+        LOWER(u.email) LIKE ${likeParam}
+        OR LOWER(COALESCE(u.referral_code,'')) LIKE ${likeParam}
+        OR u.id::text = ${exactParam}
+      )`);
     }
     if (status === "admin") where.push(`u.is_admin = true`);
     if (status === "banned") where.push(`u.is_banned = true`);
