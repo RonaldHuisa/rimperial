@@ -49,6 +49,43 @@ function normalizeArticle(row) {
   };
 }
 
+function cleanSupportText(value, max = 255) {
+  return String(value ?? "").trim().slice(0, max);
+}
+
+function normalizeSupportUrl(type, url, value) {
+  const cleanUrl = cleanSupportText(url, 900);
+  if (cleanUrl) return cleanUrl;
+
+  if (String(type || "").toLowerCase() === "whatsapp") {
+    const digits = cleanSupportText(value, 80).replace(/[^\d]/g, "");
+    if (digits.length >= 8) return `https://wa.me/${digits}`;
+  }
+
+  return "";
+}
+
+function normalizeSupportPayload(body = {}, current = {}) {
+  const type = cleanSupportText(body.type ?? body.channelType ?? current.channel_type ?? "whatsapp", 40).toLowerCase() || "whatsapp";
+  const label = cleanSupportText(body.label ?? current.label ?? "Nuevo contacto", 120) || "Nuevo contacto";
+  const value = cleanSupportText(body.value ?? current.value ?? "", 255);
+  const url = normalizeSupportUrl(type, body.url ?? current.url ?? "", value);
+  const description = cleanSupportText(body.description ?? current.description ?? "", 1000);
+  const sortOrder = Number.isFinite(Number(body.sortOrder ?? body.sort_order ?? current.sort_order))
+    ? Number(body.sortOrder ?? body.sort_order ?? current.sort_order)
+    : 0;
+  const isActive = body.isActive !== undefined
+    ? Boolean(body.isActive)
+    : body.is_active !== undefined
+      ? Boolean(body.is_active)
+      : current.is_active !== undefined
+        ? Boolean(current.is_active)
+        : true;
+
+  return { type, label, value, url, description, sortOrder, isActive };
+}
+
+
 async function listAdminSupportChannels(req, res) {
   const client = await pool.connect();
   try {
@@ -72,12 +109,17 @@ async function createAdminSupportChannel(req, res) {
   const client = await pool.connect();
   try {
     await ensureContentSchema(client);
+    const payload = normalizeSupportPayload(body);
+    if (!payload.label || !payload.value) {
+      return res.status(400).json({ message: "Nombre visible y número/valor son obligatorios." });
+    }
+
     const result = await client.query(
       `INSERT INTO support_channels(channel_type,label,value,url,description,sort_order,is_active,updated_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,NOW()) RETURNING *`,
-      [body.type || "whatsapp", body.label || "Nuevo contacto", body.value || "", body.url || "", body.description || "", Number(body.sortOrder || 0), body.isActive !== false]
+      [payload.type, payload.label, payload.value, payload.url, payload.description, payload.sortOrder, payload.isActive]
     );
-    return res.status(201).json({ channel: normalizeChannel(result.rows[0]) });
+    return res.status(201).json({ channel: normalizeChannel(result.rows[0]), message: "Canal guardado correctamente." });
   } catch (error) {
     console.error("CREATE ADMIN SUPPORT CHANNEL ERROR:", error);
     return res.status(500).json({ message: "Error al crear contacto.", detail: error.message });
@@ -90,21 +132,30 @@ async function updateAdminSupportChannel(req, res) {
   const client = await pool.connect();
   try {
     await ensureContentSchema(client);
+    if (!id) return res.status(400).json({ message: "Canal inválido." });
+
+    const current = await client.query(`SELECT * FROM support_channels WHERE id=$1 LIMIT 1`, [id]);
+    if (!current.rows.length) return res.status(404).json({ message: "Contacto no encontrado." });
+
+    const payload = normalizeSupportPayload(body, current.rows[0]);
+    if (!payload.label || !payload.value) {
+      return res.status(400).json({ message: "Nombre visible y número/valor son obligatorios." });
+    }
+
     const result = await client.query(
       `UPDATE support_channels SET
-        channel_type=COALESCE($2, channel_type),
-        label=COALESCE($3, label),
-        value=COALESCE($4, value),
-        url=COALESCE($5, url),
-        description=COALESCE($6, description),
-        sort_order=COALESCE($7, sort_order),
-        is_active=COALESCE($8, is_active),
+        channel_type=$2,
+        label=$3,
+        value=$4,
+        url=$5,
+        description=$6,
+        sort_order=$7,
+        is_active=$8,
         updated_at=NOW()
        WHERE id=$1 RETURNING *`,
-      [id, body.type ?? null, body.label ?? null, body.value ?? null, body.url ?? null, body.description ?? null, body.sortOrder ?? null, body.isActive ?? null]
+      [id, payload.type, payload.label, payload.value, payload.url, payload.description, payload.sortOrder, payload.isActive]
     );
-    if (!result.rows.length) return res.status(404).json({ message: "Contacto no encontrado." });
-    return res.json({ channel: normalizeChannel(result.rows[0]) });
+    return res.json({ channel: normalizeChannel(result.rows[0]), message: "Canal actualizado correctamente." });
   } catch (error) {
     console.error("UPDATE ADMIN SUPPORT CHANNEL ERROR:", error);
     return res.status(500).json({ message: "Error al actualizar contacto.", detail: error.message });
