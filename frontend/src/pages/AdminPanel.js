@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FiActivity, FiAlertTriangle, FiBarChart2, FiCheckCircle, FiCreditCard, FiDatabase, FiDollarSign, FiEdit3, FiFilter, FiRefreshCw, FiSearch, FiShield, FiSliders, FiUsers, FiMessageCircle, FiBookOpen, FiPlus, FiTrash2, FiUpload, FiGift } from "react-icons/fi";
+import { FiActivity, FiAlertTriangle, FiAward, FiBarChart2, FiCheckCircle, FiCreditCard, FiDatabase, FiDollarSign, FiEdit3, FiFilter, FiRefreshCw, FiSearch, FiShield, FiSliders, FiUsers, FiMessageCircle, FiBookOpen, FiPlus, FiTrash2, FiUpload, FiGift } from "react-icons/fi";
 import api from "../services/api";
 import { FaWhatsapp } from "react-icons/fa";
 import MetricCard from "../components/MetricCard";
@@ -16,6 +16,7 @@ const tabs = [
   { key: "news", label: "Noticias", icon: <FiBookOpen /> },
   { key: "redeemCodes", label: "Códigos", icon: <FiGift /> },
   { key: "roulette", label: "Ruleta", icon: <FiRefreshCw /> },
+  { key: "creditPoints", label: "Puntos", icon: <FiAward /> },
   { key: "security", label: "Seguridad", icon: <FiShield /> },
 ];
 
@@ -294,6 +295,7 @@ function UserDetailModal({ detail, onClose, onChanged }) {
           <MetricCard icon={<FiCreditCard />} label="Recarga" value={money(u.recharge_balance_usdt)} />
           <MetricCard icon={<FiActivity />} label="Ganancias" value={money(u.earnings_balance_usdt)} />
           <MetricCard icon={<FiRefreshCw />} label="Giros" value={u.roulette_points || 0} />
+          <MetricCard icon={<FiAward />} label="Puntos crédito" value={u.credit_points || 50} />
         </div>
 
         <div className="two-columns admin-two">
@@ -995,7 +997,157 @@ function SecurityPanel() {
   return <div className="page-stack"><div className="metric-grid admin-metrics"><MetricCard icon={<FiAlertTriangle />} label="Sospechosos" value={compact(data?.suspiciousUsers?.length)} /><MetricCard icon={<FiShield />} label="Baneados" value={compact(data?.bannedUsers?.length)} /><MetricCard icon={<FiDatabase />} label="IPs repetidas" value={compact(data?.ipGroups?.length)} /><MetricCard icon={<FiActivity />} label="Eventos" value={compact(data?.events?.length)} /></div><div className="two-columns admin-two"><div className="panel-card"><div className="section-title"><span>IPs</span><h3>Registros repetidos</h3></div><PaginatedAdminTable pageSize={10} rows={data?.ipGroups || []} columns={[{ key: "ip_address", label: "IP" }, { key: "accounts", label: "Cuentas" }]} /></div><div className="panel-card"><div className="section-title"><span>Eventos</span><h3>Últimos registros</h3></div><PaginatedAdminTable pageSize={10} rows={data?.events || []} columns={[{ key: "event_type", label: "Evento" }, { key: "user_email", label: "Usuario" }, { key: "ip_address", label: "IP" }, { key: "created_at", label: "Fecha", render: (r) => shortDate(r.created_at) }]} /></div></div></div>;
 }
 
-export default function AdminPanel() {
+export default 
+function CreditPointsPanel() {
+  const [rows, setRows] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, total: 0, limit: ADMIN_PAGE_SIZE });
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [form, setForm] = useState({ userId: "", operation: "add", points: "", reason: "" });
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async (page = 1) => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ page, limit: ADMIN_PAGE_SIZE, search });
+      const res = await api.get(`/admin/credit-points/users?${params.toString()}`);
+      setRows(res.data.users || []);
+      setPagination(res.data.pagination || { page, total: 0, limit: ADMIN_PAGE_SIZE });
+    } catch (err) {
+      setError(err.response?.data?.message || "No se pudo cargar puntos de crédito.");
+    } finally {
+      setLoading(false);
+    }
+  }, [search]);
+
+  useEffect(() => { load(1).catch(() => {}); }, [load]);
+
+  const openHistory = async (user) => {
+    setSelected(user);
+    setForm((f) => ({ ...f, userId: String(user.id) }));
+    const res = await api.get(`/admin/users/${user.id}/credit-points/history`);
+    setHistory(res.data.events || []);
+  };
+
+  const submitAdjust = async (e) => {
+    e.preventDefault();
+    setMessage("");
+    setError("");
+    const userId = form.userId || selected?.id;
+    if (!userId) {
+      setError("Selecciona un usuario.");
+      return;
+    }
+    try {
+      await api.post(`/admin/users/${userId}/credit-points`, {
+        operation: form.operation,
+        points: form.points,
+        reason: form.reason,
+      });
+      setMessage("Puntos de crédito actualizados.");
+      setForm((f) => ({ ...f, points: "", reason: "" }));
+      await load(pagination.page);
+      const refreshed = rows.find((item) => Number(item.id) === Number(userId)) || selected;
+      if (refreshed) await openHistory({ ...refreshed, id: userId });
+    } catch (err) {
+      setError(err.response?.data?.message || "No se pudo ajustar puntos.");
+    }
+  };
+
+  return (
+    <div className="page-stack">
+      <div className="page-header-card admin-main-header">
+        <div>
+          <span className="eyebrow">Puntos de crédito</span>
+          <h2>Control de reputación</h2>
+          <p>Administra puntos, motivos e historial de cada usuario. Solo administradores pueden modificar este módulo.</p>
+        </div>
+        <button className="secondary-btn" type="button" onClick={() => load(pagination.page)} disabled={loading}><FiRefreshCw /> Actualizar</button>
+      </div>
+
+      {message && <div className="alert success">{message}</div>}
+      {error && <div className="alert error">{error}</div>}
+
+      <div className="two-columns admin-two wide-left credit-points-admin-grid">
+        <div className="panel-card">
+          <div className="section-title"><span>Usuarios</span><h3>Puntos actuales</h3></div>
+          <div className="admin-filters compact-filters">
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar correo, ID o nombre" />
+            <button className="secondary-btn" type="button" onClick={() => load(1)}><FiSearch /> Buscar</button>
+          </div>
+          <AdminTable
+            rows={rows}
+            columns={[
+              { key: "email", label: "Usuario" },
+              { key: "referral_code", label: "ID" },
+              { key: "credit_points", label: "Puntos", render: (r) => <strong className="credit-points-value">{r.credit_points}</strong> },
+              { key: "estado", label: "Estado", render: (r) => r.withdraw_enabled ? <StatusBadge tone="success">Retiro habilitado</StatusBadge> : <StatusBadge tone="warning">Pendiente</StatusBadge> },
+              { key: "validated_invites", label: "Invitados", render: (r) => compact(r.validated_invites) },
+              { key: "actions", label: "Acción", render: (r) => <button className="secondary-btn mini" type="button" onClick={() => openHistory(r)}>Gestionar</button> },
+            ]}
+          />
+          <PaginationControls page={pagination.page} total={pagination.total} limit={pagination.limit} onPageChange={load} loading={loading} />
+        </div>
+
+        <div className="panel-card">
+          <div className="section-title"><span>Ajuste manual</span><h3>{selected ? selected.email : "Selecciona usuario"}</h3></div>
+          <p className="muted-text">Reglas automáticas: 50 base, 60 contacto, 70 cuenta retiro, 80 recarga, 90 retiro habilitado y +1 por invitado validado.</p>
+          <form className="admin-balance-form credit-points-form" onSubmit={submitAdjust}>
+            <label>
+              <span>Usuario</span>
+              <select value={form.userId} onChange={(e) => {
+                const user = rows.find((item) => String(item.id) === e.target.value);
+                setForm((f) => ({ ...f, userId: e.target.value }));
+                if (user) openHistory(user).catch(() => {});
+              }}>
+                <option value="">Selecciona usuario</option>
+                {rows.map((item) => <option key={item.id} value={item.id}>{item.email} · {item.credit_points} pts</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Operación</span>
+              <select value={form.operation} onChange={(e) => setForm((f) => ({ ...f, operation: e.target.value }))}>
+                <option value="add">Sumar</option>
+                <option value="subtract">Restar</option>
+                <option value="set">Fijar total</option>
+              </select>
+            </label>
+            <label>
+              <span>Puntos</span>
+              <input type="number" min="0" step="1" value={form.points} onChange={(e) => setForm((f) => ({ ...f, points: e.target.value }))} placeholder="0" required />
+            </label>
+            <label className="admin-balance-reason">
+              <span>Motivo</span>
+              <input value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder="Ej: verificación manual, infracción, soporte..." required />
+            </label>
+            <button className="primary-btn" type="submit">Guardar puntos</button>
+          </form>
+
+          <div className="section-title compact-title"><span>Historial</span><h3>Últimos movimientos</h3></div>
+          <PaginatedAdminTable
+            rows={history}
+            pageSize={8}
+            columns={[
+              { key: "event_type", label: "Evento" },
+              { key: "points_delta", label: "Cambio", render: (r) => <StatusBadge tone={Number(r.points_delta) >= 0 ? "success" : "warning"}>{Number(r.points_delta) >= 0 ? "+" : ""}{r.points_delta}</StatusBadge> },
+              { key: "next_points", label: "Total" },
+              { key: "reason", label: "Motivo" },
+              { key: "created_at", label: "Fecha", render: (r) => shortDate(r.created_at) },
+            ]}
+            empty="Selecciona un usuario para ver historial."
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function AdminPanel() {
   const location = useLocation();
   const initialTab = location.pathname.split("/")[2] || "overview";
   const [activeTab, setActiveTab] = useState(tabs.some((t) => t.key === initialTab) ? initialTab : "overview");
@@ -1036,6 +1188,7 @@ export default function AdminPanel() {
       {activeTab === "news" && <NewsAdminPanel />}
       {activeTab === "redeemCodes" && <RedeemCodesAdminPanel />}
       {activeTab === "roulette" && <RouletteAdminPanel />}
+      {activeTab === "creditPoints" && <CreditPointsPanel />}
       {activeTab === "security" && <SecurityPanel />}
     </div>
   );

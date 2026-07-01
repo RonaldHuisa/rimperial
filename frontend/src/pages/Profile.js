@@ -276,7 +276,7 @@ export default function Profile() {
   const activePurchase = vipData?.activePurchase;
   const activePlanPackage = (vipData?.packages || []).find((item) => Number(item.level) === Number(activePurchase?.level));
   const planName = activePurchase ? `Plan ${activePlanPackage?.name || activePurchase.level}` : "Pasantía";
-  const creditPoints = Number(p.creditPoints ?? p.credit_points ?? 100);
+  const creditPoints = Number(p.creditPoints ?? p.credit_points ?? 50);
 
   const renderMain = () => (
     <>

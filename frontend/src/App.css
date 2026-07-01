@@ -14919,3 +14919,22 @@ b,
 .prelaunch-v69 .prelaunch-rules-card li {
   align-items: flex-start !important;
 }
+
+
+/* v1.0.76 — Admin puntos de crédito */
+.credit-points-value {
+  color: var(--gold-strong);
+  font-size: 18px;
+}
+
+.credit-points-admin-grid .admin-table td {
+  vertical-align: middle;
+}
+
+.credit-points-form {
+  margin-bottom: 18px;
+}
+
+.compact-title {
+  margin-top: 18px;
+}

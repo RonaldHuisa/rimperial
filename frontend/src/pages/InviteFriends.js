@@ -27,7 +27,7 @@ function TeamMoney({ value, className = "" }) {
   );
 }
 
-const commissionPercent = (level) => (Number(level) === 1 ? 8 : 1);
+const commissionPercent = (level) => (Number(level) === 1 ? 7 : Number(level) === 2 ? 2 : 1);
 
 export default function InviteFriends() {
   const [data, setData] = useState(null);
