@@ -1,31 +1,39 @@
 const LEVEL_CONFIG = {
-  0: { name: "Pasantía", dailyTasks: 1, cooldownSeconds: 20, rewardUsdt: 0.02, difficulty: "Inicial" },
-  1: { name: "R1", dailyTasks: 2, cooldownSeconds: 30, rewardUsdt: 0.075, difficulty: "Básica" },
-  2: { name: "R2", dailyTasks: 3, cooldownSeconds: 60, rewardUsdt: 0.17, difficulty: "Básica" },
-  3: { name: "R3", dailyTasks: 4, cooldownSeconds: 90, rewardUsdt: 0.5, difficulty: "Intermedia" },
-  4: { name: "R4", dailyTasks: 5, cooldownSeconds: 120, rewardUsdt: 1.34, difficulty: "Intermedia" },
-  5: { name: "R5", dailyTasks: 6, cooldownSeconds: 150, rewardUsdt: 2.5, difficulty: "Media-alta" },
-  6: { name: "R6", dailyTasks: 7, cooldownSeconds: 180, rewardUsdt: 5.85, difficulty: "Avanzada" },
-  7: { name: "R7", dailyTasks: 8, cooldownSeconds: 240, rewardUsdt: 13.35, difficulty: "Avanzada" },
-  8: { name: "R8", dailyTasks: 10, cooldownSeconds: 300, rewardUsdt: 25.0, difficulty: "Premium" },
+  // Modelo v1.0.79:
+  // - Trabajo: lunes a viernes.
+  // - Recuperación estimada VIP: 25 días laborales.
+  // - Duración VIP: 120 días calendario.
+  // - Pasantía: 5 días, 6 tareas, 0.40 USDT diario.
+  0: { name: "Pasantía", dailyTasks: 6, cooldownSeconds: 20, rewardUsdt: 0.0666666667, difficulty: "Inicial" },
+  1: { name: "R1", dailyTasks: 6, cooldownSeconds: 30, rewardUsdt: 0.20, difficulty: "Básica" },
+  2: { name: "R2", dailyTasks: 8, cooldownSeconds: 45, rewardUsdt: 0.40, difficulty: "Básica" },
+  3: { name: "R3", dailyTasks: 10, cooldownSeconds: 60, rewardUsdt: 0.60, difficulty: "Intermedia" },
+  4: { name: "R4", dailyTasks: 12, cooldownSeconds: 75, rewardUsdt: 1.00, difficulty: "Intermedia" },
+  5: { name: "R5", dailyTasks: 14, cooldownSeconds: 90, rewardUsdt: 1.7142857143, difficulty: "Media-alta" },
+  6: { name: "R6", dailyTasks: 16, cooldownSeconds: 105, rewardUsdt: 3.00, difficulty: "Avanzada" },
+  7: { name: "R7", dailyTasks: 18, cooldownSeconds: 120, rewardUsdt: 5.5555555556, difficulty: "Avanzada" },
+  8: { name: "R8", dailyTasks: 20, cooldownSeconds: 150, rewardUsdt: 10.00, difficulty: "Premium" },
 };
 
 const DEFAULT_PACKAGES = [
-  { level: 0, name: "Pasantía", price: 0, validDays: 3650, isPurchasable: false },
-  { level: 1, name: "R1", price: 10, validDays: 150 },
-  { level: 2, name: "R2", price: 30, validDays: 150 },
-  { level: 3, name: "R3", price: 80, validDays: 150, isPurchasable: false },
-  { level: 4, name: "R4", price: 150, validDays: 150, isPurchasable: false },
-  { level: 5, name: "R5", price: 350, validDays: 150, isPurchasable: false },
-  { level: 6, name: "R6", price: 800, validDays: 150, isPurchasable: false },
-  { level: 7, name: "R7", price: 1500, validDays: 150, isPurchasable: false },
-  { level: 8, name: "R8", price: 4000, validDays: 150, isPurchasable: false },
+  { level: 0, name: "Pasantía", price: 0, validDays: 5, isPurchasable: false },
+  { level: 1, name: "R1", price: 30, validDays: 120 },
+  { level: 2, name: "R2", price: 80, validDays: 120 },
+  { level: 3, name: "R3", price: 150, validDays: 120 },
+  { level: 4, name: "R4", price: 300, validDays: 120 },
+  { level: 5, name: "R5", price: 600, validDays: 120 },
+  { level: 6, name: "R6", price: 1200, validDays: 120 },
+  { level: 7, name: "R7", price: 2500, validDays: 120 },
+  { level: 8, name: "R8", price: 5000, validDays: 120 },
 ];
 
 const DEFAULT_QUESTIONS = [
   [0,"trend","MARKET","uptrend","Pasantía · Tendencia","El escenario muestra una línea que avanza hacia arriba de forma constante. ¿Qué lectura debería marcar la IA?","Tendencia alcista","Tendencia bajista","Movimiento lateral","A"],
   [0,"trend","MARKET","sideways","Pasantía · Rango","El escenario se mantiene en un rango similar sin dirección clara. ¿Qué clasificación es más adecuada?","Movimiento lateral","Caída fuerte","Ruptura alcista","A"],
   [0,"news","MARKET",null,"Pasantía · Noticia","Una noticia no menciona impactos directos ni cambios importantes para el mercado. ¿Qué etiqueta debería recibir?","Positiva","Neutral","Negativa","B"],
+  [0,"risk","MARKET",null,"Pasantía · Riesgo","El mercado muestra cambios bruscos y señales mixtas. ¿Qué debería registrar la IA?","Mayor riesgo","Sin movimiento","Dato irrelevante","A"],
+  [0,"signal","MARKET",null,"Pasantía · Señal","Una señal de IA no tiene suficiente información para confirmar tendencia. ¿Qué clasificación es más prudente?","Cautela o neutral","Compra segura","Venta garantizada","A"],
+  [0,"volatility","MARKET","volatile","Pasantía · Volatilidad","El escenario muestra velas con cambios rápidos arriba y abajo. ¿Qué lectura corresponde?","Alta volatilidad","Tendencia estable","Sin datos","A"],
   [1,"trend","BTC","uptrend","Validación BTC","La IA revisa un escenario de BTC con máximos y mínimos cada vez más altos. ¿Qué etiqueta corresponde?","Tendencia alcista","Tendencia bajista","Movimiento lateral","A"],
   [1,"trend","ETH","downtrend","Validación ETH","ETH muestra caídas consecutivas y no recupera el rango anterior. ¿Cómo debería clasificarlo la IA?","Tendencia alcista","Tendencia bajista","Alta acumulación","B"],
   [1,"trend","BNB","sideways","Escenario BNB","BNB se mantiene en un rango similar sin romper arriba ni abajo. ¿Qué lectura es más clara?","Movimiento lateral","Tendencia alcista fuerte","Caída confirmada","A"],
@@ -50,6 +58,41 @@ const DEFAULT_QUESTIONS = [
 
 function getLevelConfig(level) {
   return LEVEL_CONFIG[Number(level || 0)] || null;
+}
+
+async function getRuntimeLevelConfig(client, level) {
+  const numericLevel = Number(level || 0);
+  const fallback = getLevelConfig(numericLevel);
+  const result = await client.query(
+    `
+    SELECT level,name,price_usdt,daily_income_usdt,valid_days,is_purchasable,task_reward_usdt,task_cooldown_seconds,task_cooldown_minutes,daily_tasks
+    FROM vip_packages
+    WHERE level = $1
+    LIMIT 1
+    `,
+    [numericLevel]
+  );
+
+  const row = result.rows[0];
+  if (!row && !fallback) return null;
+
+  const cooldownSeconds = Number(row?.task_cooldown_seconds || fallback?.cooldownSeconds || 60);
+  const dailyTasks = Number(row?.daily_tasks || fallback?.dailyTasks || 0);
+  const rewardUsdt = Number(row?.task_reward_usdt || fallback?.rewardUsdt || 0);
+
+  return {
+    name: row?.name || fallback?.name || `R${numericLevel}`,
+    level: numericLevel,
+    priceUsdt: Number(row?.price_usdt || 0),
+    dailyIncomeUsdt: Number(row?.daily_income_usdt || rewardUsdt * dailyTasks),
+    validDays: Number(row?.valid_days || (numericLevel === 0 ? 5 : 120)),
+    isPurchasable: Boolean(row?.is_purchasable),
+    dailyTasks,
+    cooldownSeconds,
+    cooldownMinutes: Math.ceil(cooldownSeconds / 60),
+    rewardUsdt,
+    difficulty: fallback?.difficulty || "Royal",
+  };
 }
 
 function getCooldownLabel(seconds) {
@@ -128,15 +171,15 @@ async function seedRoyalVipPackages(client) {
       VALUES ($1,$2,$3,$4,$5,$9,$6,CEIL($7::numeric/60),$7,$8,NOW())
       ON CONFLICT (level)
       DO UPDATE SET
-        name = COALESCE(vip_packages.name, EXCLUDED.name),
-        price_usdt = COALESCE(vip_packages.price_usdt, EXCLUDED.price_usdt),
-        daily_income_usdt = COALESCE(vip_packages.daily_income_usdt, EXCLUDED.daily_income_usdt),
-        valid_days = COALESCE(vip_packages.valid_days, EXCLUDED.valid_days),
-        is_purchasable = COALESCE(vip_packages.is_purchasable, EXCLUDED.is_purchasable),
-        task_reward_usdt = COALESCE(vip_packages.task_reward_usdt, EXCLUDED.task_reward_usdt),
-        task_cooldown_minutes = COALESCE(vip_packages.task_cooldown_minutes, EXCLUDED.task_cooldown_minutes),
-        task_cooldown_seconds = COALESCE(vip_packages.task_cooldown_seconds, EXCLUDED.task_cooldown_seconds),
-        daily_tasks = COALESCE(vip_packages.daily_tasks, EXCLUDED.daily_tasks),
+        name = vip_packages.name,
+        price_usdt = vip_packages.price_usdt,
+        daily_income_usdt = vip_packages.daily_income_usdt,
+        valid_days = vip_packages.valid_days,
+        is_purchasable = vip_packages.is_purchasable,
+        task_reward_usdt = vip_packages.task_reward_usdt,
+        task_cooldown_minutes = vip_packages.task_cooldown_minutes,
+        task_cooldown_seconds = vip_packages.task_cooldown_seconds,
+        daily_tasks = vip_packages.daily_tasks,
         updated_at = vip_packages.updated_at
       `,
       [pkg.level, cfg.name, pkg.price, cfg.rewardUsdt * cfg.dailyTasks, pkg.validDays, cfg.rewardUsdt, cfg.cooldownSeconds, cfg.dailyTasks, pkg.isPurchasable !== false]
@@ -144,4 +187,4 @@ async function seedRoyalVipPackages(client) {
   }
 }
 
-module.exports = { LEVEL_CONFIG, getLevelConfig, getCooldownLabel, ensureRoyalAiSchema, seedRoyalVipPackages };
+module.exports = { LEVEL_CONFIG, getLevelConfig, getRuntimeLevelConfig, getCooldownLabel, ensureRoyalAiSchema, seedRoyalVipPackages };

@@ -1,8 +1,36 @@
 const pool = require("../config/db");
-const { ensureRoyalAiSchema, seedRoyalVipPackages, getLevelConfig, getCooldownLabel } = require("../services/royalAiTaskService");
+const { ensureRoyalAiSchema, seedRoyalVipPackages, getRuntimeLevelConfig, getCooldownLabel } = require("../services/royalAiTaskService");
 
 function getAuthUserId(req) { return req.user.userId || req.user.id; }
 function toNumber(value) { const n = Number(value || 0); return Number.isFinite(n) ? n : 0; }
+function getPeruDateString(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Lima",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+function isPeruWorkday(date = new Date()) {
+  const day = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Lima",
+    weekday: "short",
+  }).format(date);
+  return !["Sat", "Sun"].includes(day);
+}
+function diffCalendarDays(start, end = new Date()) {
+  const startDate = getPeruDateString(new Date(start));
+  const endDate = getPeruDateString(end);
+  const startUtc = new Date(`${startDate}T00:00:00Z`);
+  const endUtc = new Date(`${endDate}T00:00:00Z`);
+  return Math.floor((endUtc.getTime() - startUtc.getTime()) / 86400000);
+}
+function isTrialActive(user) {
+  if (!user?.created_at) return true;
+  return diffCalendarDays(user.created_at) < 5;
+}
 function todayWindowSql() {
   return `completed_at >= ((date_trunc('day', NOW() AT TIME ZONE 'America/Lima')) AT TIME ZONE 'America/Lima')
           AND completed_at < (((date_trunc('day', NOW() AT TIME ZONE 'America/Lima')) + INTERVAL '1 day') AT TIME ZONE 'America/Lima')`;
@@ -102,7 +130,10 @@ async function getTasksDashboard(req, res) {
     if (!userResult.rows.length) return res.status(404).json({ message: "Usuario no encontrado." });
 
     const activeLevel = await getActiveLevel(client, userId);
-    const cfg = getLevelConfig(activeLevel);
+    const rawCfg = await getRuntimeLevelConfig(client, activeLevel);
+    const workday = isPeruWorkday();
+    const trialActive = activeLevel > 0 ? true : isTrialActive(userResult.rows[0]);
+    const cfg = rawCfg && workday && trialActive ? rawCfg : rawCfg;
 
     const todayResult = await client.query(
       `SELECT COUNT(*)::int AS completed, COALESCE(SUM(reward_usdt),0) AS reward FROM ai_task_responses WHERE user_id=$1 AND ${todayWindowSql()}`,
@@ -110,7 +141,7 @@ async function getTasksDashboard(req, res) {
     );
     const completed = Number(todayResult.rows[0]?.completed || 0);
     const rewardToday = todayResult.rows[0]?.reward || "0";
-    const limit = cfg ? cfg.dailyTasks : 0;
+    const limit = cfg && workday && trialActive ? cfg.dailyTasks : 0;
     const remaining = Math.max(0, limit - completed);
 
     const last = await getLastResponse(client, userId);
@@ -137,6 +168,11 @@ async function getTasksDashboard(req, res) {
       serverNow: new Date().toISOString(),
       activeLevel,
       levelConfig: cfg ? { ...cfg, cooldownLabel: getCooldownLabel(cfg.cooldownSeconds) } : null,
+      workday,
+      trialActive,
+      workRestrictionMessage: !workday
+        ? "Las tareas IA están disponibles de lunes a viernes."
+        : (!trialActive ? "Tu pasantía de 5 días finalizó. Compra un plan para continuar." : null),
       today: { completed, limit, remaining, rewardUsdt: rewardToday, nextResetAt },
       accuracy,
       nextAvailableAt,
@@ -169,8 +205,25 @@ async function completeVipTask(req, res) {
   try {
     await client.query("BEGIN");
     await seedRoyalVipPackages(client);
+
+    if (!isPeruWorkday()) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Las tareas IA están disponibles de lunes a viernes." });
+    }
+
+    const userResult = await client.query(`SELECT id,created_at FROM users WHERE id=$1 LIMIT 1`, [userId]);
+    if (!userResult.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Usuario no encontrado." });
+    }
+
     const activeLevel = await getActiveLevel(client, userId);
-    const cfg = getLevelConfig(activeLevel);
+    if (activeLevel === 0 && !isTrialActive(userResult.rows[0])) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Tu pasantía de 5 días finalizó. Compra un plan para continuar." });
+    }
+
+    const cfg = await getRuntimeLevelConfig(client, activeLevel);
     if (!cfg) { await client.query("ROLLBACK"); return res.status(400).json({ message: "Activa un nivel para completar tareas IA." }); }
 
     const todayCount = await client.query(`SELECT COUNT(*)::int AS total FROM ai_task_responses WHERE user_id=$1 AND ${todayWindowSql()}`, [userId]);
