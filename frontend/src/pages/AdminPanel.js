@@ -581,11 +581,16 @@ function imageUrl(src) {
 }
 
 function SupportAdminPanel() {
+  const emptySupportForm = useMemo(() => ({ type: "whatsapp", label: "", value: "", url: "", description: "", sortOrder: 1, isActive: true }), []);
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, limit: ADMIN_PAGE_SIZE });
-  const [form, setForm] = useState({ type: "whatsapp", label: "", value: "", url: "", description: "", sortOrder: 1, isActive: true });
+  const [form, setForm] = useState(emptySupportForm);
+  const [editing, setEditing] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const normalizeError = (err, fallback = "No se pudo completar la acción.") =>
+    err?.response?.data?.message || err?.response?.data?.detail || err?.message || fallback;
 
   const load = useCallback(async (page = 1) => {
     setError("");
@@ -594,23 +599,51 @@ function SupportAdminPanel() {
       setRows(res.data.channels || []);
       setPagination(res.data.pagination || { page, total: 0, limit: ADMIN_PAGE_SIZE });
     } catch (err) {
-      setError(err.message);
+      setError(normalizeError(err, "No se pudieron cargar los canales."));
     }
   }, []);
 
   useEffect(() => { load(1).catch(() => {}); }, [load]);
 
-  const create = async (e) => {
+  const resetForm = () => {
+    setEditing(null);
+    setForm({ ...emptySupportForm, sortOrder: rows.length + 1 });
+  };
+
+  const edit = (row) => {
+    setMessage("");
+    setError("");
+    setEditing(row);
+    setForm({
+      type: row.type || "whatsapp",
+      label: row.label || "",
+      value: row.value || "",
+      url: row.url || "",
+      description: row.description || "",
+      sortOrder: Number(row.sortOrder || 0),
+      isActive: row.isActive !== false,
+    });
+  };
+
+  const save = async (e) => {
     e.preventDefault();
     setMessage("");
     setError("");
     try {
-      await api.post("/admin/support-channels", form);
-      setMessage("Canal creado correctamente.");
-      setForm({ type: "whatsapp", label: "", value: "", url: "", description: "", sortOrder: rows.length + 2, isActive: true });
-      await load(1);
+      if (editing?.id) {
+        await api.patch(`/admin/support-channels/${editing.id}`, form);
+        setMessage("Canal actualizado correctamente.");
+        setEditing(null);
+        setForm({ ...emptySupportForm, sortOrder: rows.length + 1 });
+        await load(pagination.page);
+      } else {
+        await api.post("/admin/support-channels", form);
+        setMessage("Canal creado correctamente.");
+        setForm({ ...emptySupportForm, sortOrder: rows.length + 2 });
+        await load(1);
+      }
     } catch (err) {
-      setError(err.message);
+      setError(normalizeError(err, "No se pudo guardar el canal."));
     }
   };
 
@@ -619,9 +652,10 @@ function SupportAdminPanel() {
     setError("");
     try {
       await api.patch(`/admin/support-channels/${row.id}`, data);
+      setMessage(data.isActive === false ? "Canal ocultado." : "Canal activado.");
       await load(pagination.page);
     } catch (err) {
-      setError(err.message);
+      setError(normalizeError(err, "No se pudo actualizar el canal."));
     }
   };
 
@@ -631,9 +665,11 @@ function SupportAdminPanel() {
     setError("");
     try {
       await api.delete(`/admin/support-channels/${row.id}`);
+      setMessage("Canal eliminado.");
+      if (editing?.id === row.id) resetForm();
       await load(pagination.page);
     } catch (err) {
-      setError(err.message);
+      setError(normalizeError(err, "No se pudo eliminar el canal."));
     }
   };
 
@@ -643,31 +679,89 @@ function SupportAdminPanel() {
       {message && <div className="alert success">{message}</div>}
       <div className="two-columns admin-two wide-left">
         <div className="panel-card">
-          <div className="section-title"><span>Soporte editable</span><h3>Canales publicados</h3></div>
+          <div className="section-title">
+            <span>Soporte editable</span>
+            <h3>Canales publicados</h3>
+          </div>
           <AdminTable rows={rows} columns={[
             { key: "label", label: "Canal" },
             { key: "type", label: "Tipo", render: (r) => r.type === "whatsapp" ? <span className="admin-whatsapp-type"><FaWhatsapp /> WhatsApp</span> : r.type },
             { key: "value", label: "Número / valor" },
             { key: "url", label: "Enlace", render: (r) => r.url ? <a className="admin-open-link" href={r.url} target="_blank" rel="noreferrer">Abrir</a> : "—" },
             { key: "isActive", label: "Estado", render: (r) => <StatusBadge tone={r.isActive ? "success" : "neutral"}>{r.isActive ? "Activo" : "Oculto"}</StatusBadge> },
-            { key: "actions", label: "Acciones", render: (r) => <div className="table-actions"><button onClick={() => patch(r, { isActive: !r.isActive })}>{r.isActive ? "Ocultar" : "Activar"}</button><button onClick={() => remove(r)}>Eliminar</button></div> },
+            {
+              key: "actions",
+              label: "Acciones",
+              render: (r) => (
+                <div className="table-actions">
+                  <button onClick={() => edit(r)}><FiEdit3 /> Editar</button>
+                  <button onClick={() => patch(r, { isActive: !r.isActive })}>{r.isActive ? "Ocultar" : "Activar"}</button>
+                  <button onClick={() => remove(r)}><FiTrash2 /> Eliminar</button>
+                </div>
+              ),
+            },
           ]} />
           <PaginationControls page={pagination.page} total={pagination.total} limit={pagination.limit} onPageChange={load} />
         </div>
 
         <div className="panel-card admin-support-form-card">
-          <div className="section-title"><span>Nuevo canal</span><h3>Agregar enlace</h3></div>
-          <form className="form-stack" onSubmit={create}>
-            <label><span>Tipo</span><select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}><option value="whatsapp">WhatsApp</option><option value="manager">Gerente</option><option value="phone">Teléfono</option><option value="telegram">Telegram</option><option value="security">Seguridad</option></select></label>
-            <label><span>Nombre visible</span><input value={form.label} onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} placeholder="Ej: Canal oficial WhatsApp" required /></label>
-            <label><span>Número / valor</span><input value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} placeholder="+51 999 999 999" required /></label>
-            <label><span>Enlace del botón Abrir</span><input value={form.url} onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))} placeholder="https://wa.me/51..." /></label>
-            <div className="form-grid-2">
-              <label><span>Orden</span><input type="number" value={form.sortOrder} onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))} /></label>
-              <label><span>Estado</span><select value={form.isActive ? "true" : "false"} onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.value === "true" }))}><option value="true">Activo</option><option value="false">Oculto</option></select></label>
+          <div className="section-title">
+            <span>{editing ? "Editar canal" : "Nuevo canal"}</span>
+            <h3>{editing ? "Guardar cambios" : "Agregar enlace"}</h3>
+          </div>
+
+          {editing && (
+            <div className="admin-editing-note">
+              <strong>Editando:</strong>
+              <span>{editing.label}</span>
+              <button type="button" onClick={resetForm}>Cancelar edición</button>
             </div>
-            <label><span>Descripción corta</span><textarea rows="2" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Ej: Atención general y anuncios oficiales." /></label>
-            <button className="primary-btn full" type="submit"><FiPlus /> Crear canal</button>
+          )}
+
+          <form className="form-stack" onSubmit={save}>
+            <label>
+              <span>Tipo</span>
+              <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="manager">Gerente</option>
+                <option value="phone">Teléfono</option>
+                <option value="telegram">Telegram</option>
+                <option value="security">Seguridad</option>
+              </select>
+            </label>
+            <label>
+              <span>Nombre visible</span>
+              <input value={form.label} onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} placeholder="Ej: Canal oficial WhatsApp" required />
+            </label>
+            <label>
+              <span>Número / valor</span>
+              <input value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} placeholder="+51 999 999 999" required />
+            </label>
+            <label>
+              <span>Enlace del botón Abrir</span>
+              <input value={form.url} onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))} placeholder="https://wa.me/51..." />
+            </label>
+            <div className="form-grid-2">
+              <label>
+                <span>Orden</span>
+                <input type="number" value={form.sortOrder} onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))} />
+              </label>
+              <label>
+                <span>Estado</span>
+                <select value={form.isActive ? "true" : "false"} onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.value === "true" }))}>
+                  <option value="true">Activo</option>
+                  <option value="false">Oculto</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              <span>Descripción corta</span>
+              <textarea rows="2" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Ej: Atención general y anuncios oficiales." />
+            </label>
+            <button className="primary-btn full" type="submit">
+              {editing ? <FiUpload /> : <FiPlus />} {editing ? "Guardar cambios" : "Crear canal"}
+            </button>
+            {editing && <button className="secondary-btn full" type="button" onClick={resetForm}>Cancelar edición</button>}
           </form>
         </div>
       </div>

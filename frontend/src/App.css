@@ -14977,3 +14977,55 @@ b,
 .prelaunch-v69 .prelaunch-progress-bar {
   margin-bottom: 0 !important;
 }
+
+
+/* v1.0.81 — Soporte admin: crear, guardar y editar canales */
+.admin-editing-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(126,100,232,.18);
+  border-radius: 12px;
+  background: rgba(126,100,232,.07);
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.admin-editing-note strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.admin-editing-note span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.admin-editing-note button {
+  border: 1px solid var(--line);
+  background: var(--surface-solid);
+  border-radius: 10px;
+  padding: 7px 10px;
+  color: var(--text);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.table-actions button svg {
+  margin-right: 4px;
+}
+
+@media (max-width: 680px) {
+  .admin-editing-note {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .admin-editing-note button {
+    width: 100%;
+  }
+}
