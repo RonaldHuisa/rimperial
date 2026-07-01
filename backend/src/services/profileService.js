@@ -47,7 +47,7 @@ async function getUserProfileBundle(userId, client = pool) {
         phone_number,
         referral_code,
         created_at,
-        COALESCE(credit_points, 100) AS credit_points,
+        COALESCE(credit_points, 50) AS credit_points,
         COALESCE(withdraw_enabled, false) AS withdraw_enabled,
         withdraw_enabled_at,
         withdraw_enabled_note

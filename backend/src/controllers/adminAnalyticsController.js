@@ -1,6 +1,7 @@
 const pool = require("../config/db");
 const { ensureRouletteSchema, normalizePrize, normalizeSpin } = require("../services/rouletteService");
 const { seedRoyalVipPackages } = require("../services/royalAiTaskService");
+const { ensureCreditPointsSchema, adjustCreditPoints, awardCreditPointMilestone, awardValidatedReferralCreditPoint } = require("../services/creditPointsService");
 
 function money(value) {
   const n = Number(value || 0);
@@ -265,7 +266,7 @@ async function listAdminUsers(req, res) {
           u.id,u.email,u.referral_code,u.referred_by_id,u.created_at,u.balance_usdt,u.recharge_balance_usdt,
           u.withdrawable_usdt,u.earnings_balance_usdt,u.is_admin,u.is_banned,u.banned_reason,
           u.is_suspicious,u.suspicious_reason,u.register_ip,u.last_login_ip,u.last_login_at,
-          u.full_name,u.phone_country_code,u.phone_number,COALESCE(u.roulette_points,0) AS roulette_points,COALESCE(u.withdraw_enabled,false) AS withdraw_enabled,
+          u.full_name,u.phone_country_code,u.phone_number,COALESCE(u.credit_points,50) AS credit_points,COALESCE(u.roulette_points,0) AS roulette_points,COALESCE(u.withdraw_enabled,false) AS withdraw_enabled,
           COALESCE(active_vip.active_level,0) AS active_level,
           COALESCE(task_week.responses,0) AS week_responses,
           COALESCE(task_week.correct,0) AS week_correct,
@@ -302,7 +303,7 @@ async function getAdminUserDetail(req, res) {
   if (!userId) return res.status(400).json({ message: "Usuario inválido." });
   try {
     const [user, deposits, withdrawals, tasks, ledger, referrals, withdrawalAccounts] = await Promise.all([
-      pool.query(`SELECT id,email,referral_code,referred_by_id,created_at,balance_usdt,recharge_balance_usdt,withdrawable_usdt,earnings_balance_usdt,is_admin,is_banned,banned_reason,is_suspicious,suspicious_reason,register_ip,last_login_ip,last_login_at,full_name,phone_country_iso,phone_country_name,phone_country_code,phone_number,COALESCE(roulette_points,0) AS roulette_points,COALESCE(withdraw_enabled,false) AS withdraw_enabled,withdraw_enabled_at,withdraw_enabled_note FROM users WHERE id=$1`, [userId]),
+      pool.query(`SELECT id,email,referral_code,referred_by_id,created_at,balance_usdt,recharge_balance_usdt,withdrawable_usdt,earnings_balance_usdt,is_admin,is_banned,banned_reason,is_suspicious,suspicious_reason,register_ip,last_login_ip,last_login_at,full_name,phone_country_iso,phone_country_name,phone_country_code,phone_number,COALESCE(credit_points,50) AS credit_points,COALESCE(roulette_points,0) AS roulette_points,COALESCE(withdraw_enabled,false) AS withdraw_enabled,withdraw_enabled_at,withdraw_enabled_note FROM users WHERE id=$1`, [userId]),
       pool.query(`SELECT id,network,amount_usdt,status,sweep_status,tx_hash,created_at FROM deposits WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20`, [userId]),
       pool.query(`SELECT id,network,amount_requested,amount_to_receive,status,tx_hash,created_at,paid_at FROM withdrawals WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20`, [userId]),
       pool.query(`
@@ -327,8 +328,24 @@ async function updateAdminUser(req, res) {
   const adminId = req.user.userId;
   const { isSuspicious, suspiciousReason, isBanned, bannedReason, isAdmin, withdrawEnabled, withdrawEnabledNote } = req.body || {};
   if (!userId) return res.status(400).json({ message: "Usuario inválido." });
+
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
+    await ensureCreditPointsSchema(client);
+    await client.query("BEGIN");
+
+    const currentResult = await client.query(
+      `SELECT id,email,COALESCE(withdraw_enabled,false) AS withdraw_enabled,referred_by_id FROM users WHERE id=$1 FOR UPDATE`,
+      [userId]
+    );
+    if (!currentResult.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Usuario no encontrado." });
+    }
+    const currentUser = currentResult.rows[0];
+    const wasWithdrawEnabled = Boolean(currentUser.withdraw_enabled);
+
+    const result = await client.query(
       `
       UPDATE users
       SET
@@ -345,19 +362,44 @@ async function updateAdminUser(req, res) {
         withdraw_enabled_by = CASE WHEN $8 = true THEN $6 WHEN $8 = false THEN NULL ELSE withdraw_enabled_by END,
         withdraw_enabled_note = CASE WHEN $8 IS NULL THEN withdraw_enabled_note ELSE NULLIF($9,'') END
       WHERE id=$7
-      RETURNING id,email,is_admin,is_banned,banned_reason,is_suspicious,suspicious_reason,withdraw_enabled,withdraw_enabled_at,withdraw_enabled_note
+      RETURNING id,email,is_admin,is_banned,banned_reason,is_suspicious,suspicious_reason,withdraw_enabled,withdraw_enabled_at,withdraw_enabled_note,COALESCE(credit_points,50) AS credit_points
       `,
       [isSuspicious, suspiciousReason || null, isBanned, bannedReason || null, isAdmin, adminId, userId, withdrawEnabled, withdrawEnabledNote || null]
     );
-    if (!result.rows.length) return res.status(404).json({ message: "Usuario no encontrado." });
-    await pool.query(
+
+    if (withdrawEnabled === true) {
+      await awardCreditPointMilestone(
+        client,
+        userId,
+        90,
+        "withdraw_enabled",
+        "Admin habilitó retiros del usuario.",
+        { adminId, note: withdrawEnabledNote || "" },
+        adminId
+      );
+
+      if (!wasWithdrawEnabled && currentUser.referred_by_id) {
+        await awardValidatedReferralCreditPoint(client, {
+          sponsorId: currentUser.referred_by_id,
+          invitedUserId: userId,
+          adminId,
+        });
+      }
+    }
+
+    await client.query(
       `INSERT INTO user_security_events(user_id,event_type,reason,created_by,metadata) VALUES ($1,'ADMIN_USER_UPDATE',$2,$3,$4::jsonb)`,
       [userId, "Actualización realizada desde panel admin.", adminId, JSON.stringify({ isSuspicious, isBanned, isAdmin, withdrawEnabled })]
     ).catch(() => {});
+
+    await client.query("COMMIT");
     return res.json({ message: "Usuario actualizado.", user: result.rows[0] });
   } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
     console.error("ADMIN UPDATE USER ERROR:", error);
     return res.status(500).json({ message: "Error al actualizar usuario.", detail: error.message });
+  } finally {
+    client.release();
   }
 }
 
@@ -460,6 +502,18 @@ async function adjustAdminUserBalance(req, res) {
        VALUES ($1,'ADMIN_BALANCE_ADJUSTMENT',$2,$3,$4::jsonb)`,
       [userId, `${title}: ${amount} USDT.`, adminId, JSON.stringify({ balanceType, direction, amount, ledgerId: ledger.rows[0].id })]
     ).catch(() => {});
+
+    if (balanceType === 'recharge' && direction === 'credit') {
+      await awardCreditPointMilestone(
+        client,
+        userId,
+        80,
+        "recharge_done",
+        "Primera recarga registrada por admin.",
+        { adminId, amountUsdt: amount, ledgerId: ledger.rows[0].id },
+        adminId
+      );
+    }
 
     await client.query('COMMIT');
     return res.json({
@@ -997,6 +1051,147 @@ async function adjustAdminUserRoulettePoints(req, res) {
   }
 }
 
+
+async function listAdminCreditPointUsers(req, res) {
+  try {
+    await ensureCreditPointsSchema(pool);
+    const limit = getLimit(req.query.limit, 25, 100);
+    const page = Math.max(1, Number(req.query.page || 1));
+    const offset = getOffset(page, limit);
+    const search = String(req.query.search || "").trim();
+
+    const params = [];
+    const where = [];
+    if (search) {
+      params.push(`%${search.toLowerCase()}%`);
+      where.push(`(LOWER(u.email) LIKE $${params.length} OR LOWER(u.referral_code) LIKE $${params.length} OR LOWER(COALESCE(u.full_name,'')) LIKE $${params.length})`);
+    }
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
+    const dataParams = [...params, limit, offset];
+    const [countResult, usersResult] = await Promise.all([
+      pool.query(`SELECT COUNT(*)::int AS total FROM users u ${whereSql}`, params),
+      pool.query(
+        `
+        SELECT
+          u.id,
+          u.email,
+          u.referral_code,
+          u.full_name,
+          u.created_at,
+          COALESCE(u.credit_points,50)::int AS credit_points,
+          COALESCE(u.withdraw_enabled,false) AS withdraw_enabled,
+          COALESCE(u.recharge_balance_usdt,0) AS recharge_balance_usdt,
+          COALESCE(u.withdrawable_usdt,0) AS withdrawable_usdt,
+          CASE WHEN COALESCE(NULLIF(TRIM(u.full_name),''),'') <> ''
+             AND COALESCE(NULLIF(TRIM(u.phone_number),''),'') <> ''
+             AND COALESCE(NULLIF(TRIM(u.phone_country_code),''),'') <> '' THEN true ELSE false END AS contact_complete,
+          EXISTS (SELECT 1 FROM user_withdrawal_accounts uwa WHERE uwa.user_id = u.id) AS has_withdrawal_account,
+          EXISTS (SELECT 1 FROM deposits d WHERE d.user_id = u.id AND d.status='confirmed' AND COALESCE(d.amount_usdt,0) > 0) AS has_deposit,
+          (SELECT COUNT(*)::int FROM users invited WHERE invited.referred_by_id = u.id AND COALESCE(invited.withdraw_enabled,false)=true) AS validated_invites
+        FROM users u
+        ${whereSql}
+        ORDER BY u.credit_points DESC, u.created_at DESC
+        LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}
+        `,
+        dataParams
+      ),
+    ]);
+
+    return res.json({
+      users: usersResult.rows,
+      pagination: { page, limit, total: intValue(countResult.rows[0]?.total) },
+    });
+  } catch (error) {
+    console.error("ADMIN CREDIT POINT USERS ERROR:", error);
+    return res.status(500).json({ message: "Error al listar puntos de crédito.", detail: error.message });
+  }
+}
+
+async function getAdminCreditPointHistory(req, res) {
+  const userId = Number(req.params.userId);
+  if (!userId) return res.status(400).json({ message: "Usuario inválido." });
+
+  try {
+    await ensureCreditPointsSchema(pool);
+    const [userResult, eventsResult] = await Promise.all([
+      pool.query(`SELECT id,email,referral_code,COALESCE(credit_points,50)::int AS credit_points FROM users WHERE id=$1`, [userId]),
+      pool.query(
+        `
+        SELECT e.*, admin.email AS admin_email
+        FROM credit_point_events e
+        LEFT JOIN users admin ON admin.id = e.created_by
+        WHERE e.user_id = $1
+        ORDER BY e.created_at DESC
+        LIMIT 100
+        `,
+        [userId]
+      ),
+    ]);
+    if (!userResult.rows.length) return res.status(404).json({ message: "Usuario no encontrado." });
+    return res.json({ user: userResult.rows[0], events: eventsResult.rows });
+  } catch (error) {
+    console.error("ADMIN CREDIT POINT HISTORY ERROR:", error);
+    return res.status(500).json({ message: "Error al cargar historial de puntos.", detail: error.message });
+  }
+}
+
+async function adjustAdminUserCreditPoints(req, res) {
+  const userId = Number(req.params.userId);
+  const adminId = req.user.userId;
+  const { operation, points, reason } = req.body || {};
+
+  if (!userId) return res.status(400).json({ message: "Usuario inválido." });
+  if (!["add", "subtract", "set"].includes(operation)) {
+    return res.status(400).json({ message: "Operación inválida." });
+  }
+
+  const qty = Math.floor(Number(points || 0));
+  if (!Number.isFinite(qty) || qty < 0) {
+    return res.status(400).json({ message: "Ingresa puntos válidos." });
+  }
+  if (qty > 100000) {
+    return res.status(400).json({ message: "Cantidad demasiado alta." });
+  }
+  if (!String(reason || "").trim()) {
+    return res.status(400).json({ message: "Ingresa el motivo del ajuste." });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await adjustCreditPoints(client, {
+      userId,
+      operation,
+      points: qty,
+      reason,
+      eventType: "admin_manual_adjustment",
+      eventKey: null,
+      createdBy: adminId,
+      metadata: { adminId, operation, points: qty },
+    });
+    await client.query(
+      `INSERT INTO user_security_events(user_id,event_type,reason,created_by,metadata)
+       VALUES ($1,'ADMIN_CREDIT_POINTS',$2,$3,$4::jsonb)`,
+      [
+        userId,
+        `Ajuste puntos de crédito: ${operation} ${qty}.`,
+        adminId,
+        JSON.stringify({ operation, points: qty, previous: result.previousPoints, next: result.nextPoints }),
+      ]
+    ).catch(() => {});
+    await client.query("COMMIT");
+    return res.json({ message: "Puntos de crédito actualizados.", ...result });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("ADMIN CREDIT POINT ADJUST ERROR:", error);
+    return res.status(500).json({ message: "Error al ajustar puntos de crédito.", detail: error.message });
+  } finally {
+    client.release();
+  }
+}
+
+
 module.exports = {
   getAdminOverview,
   listAdminUsers,
@@ -1013,6 +1208,9 @@ module.exports = {
   updateAdminRoulettePrize,
   listAdminRouletteSpins,
   adjustAdminUserRoulettePoints,
+  listAdminCreditPointUsers,
+  getAdminCreditPointHistory,
+  adjustAdminUserCreditPoints,
   listAdminRedeemCodes,
   createAdminRedeemCode,
   updateAdminRedeemCode,

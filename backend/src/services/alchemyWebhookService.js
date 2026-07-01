@@ -3,6 +3,7 @@ const { ethers } = require("ethers");
 const pool = require("../config/db");
 const { refreshMiningAccountForUser } = require("./miningService");
 const { createReferralCommissions } = require("./referralCommissionService");
+const { awardCreditPointMilestone } = require("./creditPointsService");
 const {
   getPaymentNetwork,
   getNetworkTokenContract,
@@ -386,6 +387,15 @@ async function processAlchemyWebhookPayload(payload, { expectedNetworkCode = nul
         WHERE id = $2
         `,
         [amountUsdt, wallet.user_id]
+      );
+
+      await awardCreditPointMilestone(
+        client,
+        wallet.user_id,
+        80,
+        "recharge_done",
+        "Primera recarga confirmada.",
+        { depositId, network: transfer.network.code, amountUsdt: String(amountUsdt), txHash: transfer.txHash }
       );
 
       await client.query(

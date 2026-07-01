@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
   phone_country_name VARCHAR(80),
   phone_country_code VARCHAR(8),
   phone_number VARCHAR(24),
-  credit_points INTEGER DEFAULT 100 NOT NULL,
+  credit_points INTEGER DEFAULT 50 NOT NULL,
   roulette_points INTEGER DEFAULT 0 NOT NULL,
   withdraw_enabled BOOLEAN DEFAULT FALSE NOT NULL,
   withdraw_enabled_at TIMESTAMP WITHOUT TIME ZONE,
@@ -139,6 +139,24 @@ CREATE TABLE IF NOT EXISTS account_ledger (
   created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_account_ledger_user_created ON account_ledger(user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS credit_point_events (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  event_type VARCHAR(60) NOT NULL,
+  event_key VARCHAR(160),
+  operation VARCHAR(30) NOT NULL,
+  points_delta INTEGER NOT NULL DEFAULT 0,
+  previous_points INTEGER NOT NULL DEFAULT 0,
+  next_points INTEGER NOT NULL DEFAULT 0,
+  reason TEXT,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_credit_point_events_user_key ON credit_point_events(user_id, event_key) WHERE event_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_credit_point_events_user_created ON credit_point_events(user_id, created_at DESC);
+
 
 CREATE TABLE IF NOT EXISTS deposits (
   id SERIAL PRIMARY KEY,

@@ -18,6 +18,9 @@ const {
   updateAdminRoulettePrize,
   listAdminRouletteSpins,
   adjustAdminUserRoulettePoints,
+  listAdminCreditPointUsers,
+  getAdminCreditPointHistory,
+  adjustAdminUserCreditPoints,
   listAdminRedeemCodes,
   createAdminRedeemCode,
   updateAdminRedeemCode,
@@ -35,6 +38,9 @@ router.get("/users/:userId", getAdminUserDetail);
 router.patch("/users/:userId", updateAdminUser);
 router.post("/users/:userId/balance", adjustAdminUserBalance);
 router.post("/users/:userId/roulette-points", adjustAdminUserRoulettePoints);
+router.get("/credit-points/users", listAdminCreditPointUsers);
+router.get("/users/:userId/credit-points/history", getAdminCreditPointHistory);
+router.post("/users/:userId/credit-points", adjustAdminUserCreditPoints);
 router.get("/tasks", listAdminTasks);
 router.post("/tasks", createAdminTask);
 router.patch("/tasks/:questionId", updateAdminTask);

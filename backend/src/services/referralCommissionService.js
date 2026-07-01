@@ -51,7 +51,7 @@ async function createSingleReferralCommission({
   const commissionBaseAmount = Number(commissionPlan.price_usdt || 0);
   if (commissionBaseAmount <= 0) return;
 
-  const percent = referralDepth === 1 ? 8 : 1;
+  const percent = referralDepth === 1 ? 7 : referralDepth === 2 ? 2 : 1;
 
   const commissionResult = await client.query(
     `
@@ -153,8 +153,9 @@ async function createReferralCommissions(
   options = {}
 ) {
   // Royal Imperial comisiones:
-  // - Nivel 1/directo: 8%.
-  // - Nivel 2 e indirecto Nivel 3: 1% cada uno.
+  // - Nivel 1/directo: 7%.
+  // - Nivel 2: 2%.
+  // - Nivel 3: 1%.
   // - Para cobrar, el receptor debe tener al menos un nivel activo o comprado.
   // - Si el referido compra un nivel superior al receptor,
   //   la comisión se calcula solo hasta el nivel máximo comprado por el receptor.

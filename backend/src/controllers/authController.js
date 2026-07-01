@@ -5,6 +5,7 @@ const pool = require("../config/db");
 const { normalizePhone, normalizeCountryCode, getUserProfileBundle, validateWithdrawalAccountPayload } = require("../services/profileService");
 const { ensureRouletteSchema, normalizePrize, normalizeSpin, pickPrize } = require("../services/rouletteService");
 const { addAlchemyAddressToNetworkWebhooks } = require("../services/alchemyWebhookService");
+const { ensureCreditPointsSchema, awardCreditPointMilestone, adjustCreditPoints } = require("../services/creditPointsService");
 
 const { generateUniqueReferralCode } = require("../utils/referralUtil");
 const { getClientIp, ensureSecuritySchema, captureRegisterIp, captureLoginIp, ensureIpCanRegister, logSecurityEvent } = require("../services/securityService");
@@ -253,10 +254,11 @@ async function register(req, res) {
                 security_password_hash, 
                 referral_code, 
                 referred_by_id,
-                is_admin
+                is_admin,
+                credit_points
             )
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, email, referral_code, referred_by_id, is_admin, created_at
+            VALUES ($1, $2, $3, $4, $5, $6, 50)
+            RETURNING id, email, referral_code, referred_by_id, is_admin, credit_points, created_at
             `,
             [
                 email,
@@ -269,6 +271,17 @@ async function register(req, res) {
         );
 
         const user = newUser.rows[0];
+
+        await ensureCreditPointsSchema(client);
+        await adjustCreditPoints(client, {
+            userId: user.id,
+            operation: "set",
+            points: 50,
+            reason: "Puntos base al crear cuenta.",
+            eventType: "register_base",
+            eventKey: "register_base",
+            metadata: { source: "register" },
+        });
 
         await captureRegisterIp(client, user.id, requestIp);
 
@@ -474,6 +487,15 @@ async function updateProfile(req, res) {
             [cleanFullName, cleanCountryIso, cleanCountryName, cleanCountryCode, cleanPhone, userId]
         );
 
+        await awardCreditPointMilestone(
+            pool,
+            userId,
+            60,
+            "contact_complete",
+            "Datos de contacto registrados.",
+            { fullName: cleanFullName, phoneCountryIso: cleanCountryIso, phoneCountryCode: cleanCountryCode }
+        );
+
         const bundle = await getUserProfileBundle(userId);
         return res.json({ message: "Datos actualizados correctamente.", ...bundle });
     } catch (error) {
@@ -518,6 +540,15 @@ async function saveWithdrawalAccount(req, res) {
               updated_at = CURRENT_TIMESTAMP
             `,
             [userId, network, label, withdrawalAddress, shouldDefault]
+        );
+
+        await awardCreditPointMilestone(
+            client,
+            userId,
+            70,
+            "withdrawal_account_complete",
+            "Cuenta de retiro registrada.",
+            { network }
         );
 
         await client.query("COMMIT");
@@ -845,10 +876,15 @@ async function spinRoulette(req, res) {
                 [amount, userId]
             );
         } else if (prizeType === "credit_points" && creditPoints > 0) {
-            await client.query(
-                `UPDATE users SET credit_points=COALESCE(credit_points,100)+$1 WHERE id=$2`,
-                [creditPoints, userId]
-            );
+            await adjustCreditPoints(client, {
+                userId,
+                operation: "add",
+                points: creditPoints,
+                reason: `Premio obtenido en ruleta: ${prize.label}`,
+                eventType: "roulette_prize",
+                eventKey: `roulette_spin_pending:${userId}:${Date.now()}`,
+                metadata: { prizeId: prize.id, prizeLabel: prize.label, prizeType },
+            });
         }
 
         const spinResult = await client.query(
