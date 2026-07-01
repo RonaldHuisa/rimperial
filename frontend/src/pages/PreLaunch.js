@@ -57,8 +57,8 @@ export default function PreLaunch() {
   const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
   const checkinTotalReward = Number(checkin.maxDays || 5) * Number(checkin.rewardUsdt || 1);
   const inviteReward = Number(invite.rewardUsdt || 1);
-  const tiktokReward = Number(tiktok.rewardUsdt || 3);
-  const maxBonus = Number(bonus.maxUsdt || (checkinTotalReward + inviteReward + tiktokReward));
+  const tiktokReward = Number(tiktok.rewardUsdt || 4);
+  const maxBonus = Number(bonus.maxUsdt || 10);
   const progressPercent = Math.min(100, (Number(bonus.totalEarnedUsdt || 0) / Math.max(1, maxBonus)) * 100);
 
   const copyReferral = async () => {
@@ -165,16 +165,7 @@ export default function PreLaunch() {
             <div className="prelaunch-progress-bar">
               <i style={{ width: `${progressPercent}%` }} />
             </div>
-            <div className="prelaunch-mini-steps">
-              <span>Check-in {checkin.completed || 0}/{checkin.maxDays || 5}</span>
-              <span>{invite.credited ? "Invitado listo" : "Invitado pendiente"}</span>
-              <span>{tiktokText}</span>
-            </div>
-            <div className="prelaunch-bonus-grid">
-              <span><b>5 USDT</b><small>check-in</small></span>
-              <span><b>5 USDT</b><small>invitado</small></span>
-              <span><b>5 USDT</b><small>TikTok</small></span>
-            </div>
+
           </section>
 
           <section className="prelaunch-actions">
@@ -223,7 +214,7 @@ export default function PreLaunch() {
                   <strong>Publica un TikTok</strong>
                   <StatusPill tone={tiktokTone}>{tiktokText}</StatusPill>
                 </div>
-                <p>+3 USDT si tu video promocional es aprobado.</p>
+                <p>+4 USDT si tu video promocional es aprobado.</p>
                 <form className="prelaunch-tiktok-form" onSubmit={submitTikTok}>
                   <input
                     value={tiktokUrl}

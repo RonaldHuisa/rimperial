@@ -14962,3 +14962,18 @@ b,
     flex: 0 0 auto;
   }
 }
+
+
+/* v1.0.78 — Pre-lanzamiento: progreso limpio sin tarjetas de montos repetidas */
+.prelaunch-v69 .prelaunch-bonus-tech .prelaunch-mini-steps,
+.prelaunch-v69 .prelaunch-bonus-tech .prelaunch-bonus-grid {
+  display: none !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-tech {
+  padding-bottom: 13px !important;
+}
+
+.prelaunch-v69 .prelaunch-progress-bar {
+  margin-bottom: 0 !important;
+}
