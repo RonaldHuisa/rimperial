@@ -14904,3 +14904,18 @@ b,
   letter-spacing: 0 !important;
   font-weight: 600 !important;
 }
+
+
+/* v1.0.74 — Ajustes pre-lanzamiento julio 7 */
+.prelaunch-v69 .prelaunch-bonus-grid b {
+  font-size: 11px !important;
+  white-space: nowrap !important;
+}
+
+.prelaunch-v69 .prelaunch-bonus-head strong {
+  white-space: nowrap !important;
+}
+
+.prelaunch-v69 .prelaunch-rules-card li {
+  align-items: flex-start !important;
+}

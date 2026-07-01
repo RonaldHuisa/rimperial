@@ -49,7 +49,7 @@ export default function AppShell({ children }) {
       month: "2-digit",
       day: "2-digit",
     }).format(new Date());
-    return peruDate <= "2026-07-02";
+    return peruDate <= "2026-07-07";
   }, []);
 
   useEffect(() => {

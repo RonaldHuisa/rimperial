@@ -55,7 +55,11 @@ export default function PreLaunch() {
   const tiktok = data?.tiktok || {};
   const bonus = data?.bonus || {};
   const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
-  const progressPercent = Math.min(100, (Number(bonus.totalEarnedUsdt || 0) / Number(bonus.maxUsdt || 15)) * 100);
+  const checkinTotalReward = Number(checkin.maxDays || 5) * Number(checkin.rewardUsdt || 1);
+  const inviteReward = Number(invite.rewardUsdt || 1);
+  const tiktokReward = Number(tiktok.rewardUsdt || 3);
+  const maxBonus = Number(bonus.maxUsdt || (checkinTotalReward + inviteReward + tiktokReward));
+  const progressPercent = Math.min(100, (Number(bonus.totalEarnedUsdt || 0) / Math.max(1, maxBonus)) * 100);
 
   const copyReferral = async () => {
     try {
@@ -127,7 +131,7 @@ export default function PreLaunch() {
             <strong>ID {referralCode}</strong>
           </div>
           <h2>Pre-lanzamiento</h2>
-          <p>Gana saldo de garantía con acciones verificadas antes del lanzamiento oficial.</p>
+          <p>Gana saldo de garantía hasta el martes 7 de julio.</p>
         </div>
 
         <div className="prelaunch-hero-badge">
@@ -148,7 +152,7 @@ export default function PreLaunch() {
               <FiShield />
               <div>
                 <strong>Beneficio no disponible</strong>
-                <span>Esta campaña aplica para usuarios registrados antes del 2 de julio.</span>
+                <span>Esta campaña aplica para usuarios registrados antes del 7 de julio.</span>
               </div>
             </div>
           )}
@@ -156,7 +160,7 @@ export default function PreLaunch() {
           <section className="prelaunch-progress-card compact prelaunch-bonus-card prelaunch-bonus-tech">
             <div className="prelaunch-bonus-head">
               <span>Progreso fundador</span>
-              <strong>{money(bonus.totalEarnedUsdt)} / 15 USDT</strong>
+              <strong>{money(bonus.totalEarnedUsdt)} / {money(maxBonus)}</strong>
             </div>
             <div className="prelaunch-progress-bar">
               <i style={{ width: `${progressPercent}%` }} />
@@ -183,7 +187,7 @@ export default function PreLaunch() {
                     +1 USDT
                   </StatusPill>
                 </div>
-                <p>1 USDT por día · máximo 5 días.</p>
+                <p>1 USDT por check-in · máximo 5 veces hasta el 7 de julio.</p>
                 <div className="prelaunch-days">
                   {(checkin.days || []).map((day) => (
                     <span key={day.day} className={`${day.done ? "done" : ""} ${day.isToday ? "today" : ""}`}>
@@ -204,7 +208,7 @@ export default function PreLaunch() {
                   <strong>Invita 1 usuario real</strong>
                   <StatusPill tone={inviteTone}>{inviteText}</StatusPill>
                 </div>
-                <p>+5 USDT al validar un usuario real.</p>
+                <p>+1 USDT al validar un usuario real.</p>
                 <div className="prelaunch-referral-box">
                   <span>{referralLink}</span>
                   <button type="button" onClick={copyReferral}><FiCopy /> Copiar</button>
@@ -219,7 +223,7 @@ export default function PreLaunch() {
                   <strong>Publica un TikTok</strong>
                   <StatusPill tone={tiktokTone}>{tiktokText}</StatusPill>
                 </div>
-                <p>+5 USDT si tu video es aprobado.</p>
+                <p>+3 USDT si tu video promocional es aprobado.</p>
                 <form className="prelaunch-tiktok-form" onSubmit={submitTikTok}>
                   <input
                     value={tiktokUrl}
@@ -241,8 +245,9 @@ export default function PreLaunch() {
               <h3>Condiciones</h3>
             </div>
             <ul>
-              <li><FiCheck /> Usuarios registrados antes del 2 de julio.</li>
-              <li><FiCheck /> Recargas, retiros y planes estarán disponibles en el lanzamiento oficial.</li>
+              <li><FiCheck /> Usuarios registrados antes del 7 de julio.</li>
+              <li><FiCheck /> Recargas, retiros y compra de planes estarán disponibles en el lanzamiento oficial.</li>
+              <li><FiCheck /> La pasantía y las tareas IA se pueden usar durante el pre-lanzamiento.</li>
               <li><FiCheck /> Los invitados deben validar su registro con un gerente.</li>
               <li><FiCheck /> Los bonos se acreditan como saldo de garantía.</li>
             </ul>
