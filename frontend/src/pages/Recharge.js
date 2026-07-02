@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { FiCheckCircle, FiCopy, FiRefreshCw } from "react-icons/fi";
 import { QRCodeCanvas } from "qrcode.react";
 import api from "../services/api";
 import bep20Icon from "../assets/networks/usdt-bep20.png";
 import polygonIcon from "../assets/networks/usdt-polygon.png";
+import { isRechargeLockedByPrelaunch, rechargePrelaunchMessage } from "../utils/prelaunchLock";
 
 const FALLBACK_NETWORKS = [
   { code: "BEP20-USDT", displayName: "BEP20" },
@@ -38,6 +40,7 @@ export default function Recharge() {
 
   const networks = useMemo(() => (supported.length ? supported : FALLBACK_NETWORKS), [supported]);
   const selectedNetwork = networkInfo(network);
+  const rechargeLocked = isRechargeLockedByPrelaunch();
 
   const showToast = (text) => {
     setToast(text);
@@ -57,10 +60,10 @@ export default function Recharge() {
   };
 
   useEffect(() => {
-    loadWallet();
+    if (!rechargeLocked) loadWallet();
     return () => window.clearTimeout(window.__royalRechargeToastTimer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [rechargeLocked]);
 
   const changeNetwork = (value) => {
     setNetwork(value);
@@ -91,6 +94,24 @@ export default function Recharge() {
       setLoading(false);
     }
   };
+
+  if (rechargeLocked) {
+    return (
+      <div className="page-stack recharge-page recharge-page-v22">
+        <section className="page-header-card recharge-hero-card compact-recharge-hero prelaunch-locked-recharge">
+          <div>
+            <span className="eyebrow">Pre-lanzamiento activo</span>
+            <h2>Recargas no disponibles aún</h2>
+            <p>{rechargePrelaunchMessage()}</p>
+            <div className="prelaunch-locked-actions">
+              <Link className="primary-btn" to="/prelaunch">Ver bono fundador</Link>
+              <Link className="secondary-btn" to="/home">Volver al inicio</Link>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="page-stack recharge-page recharge-page-v22">

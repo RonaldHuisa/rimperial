@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FiArrowRight,
   FiBookOpen,
@@ -16,6 +16,7 @@ import {
 } from "react-icons/fi";
 import api from "../services/api";
 import usdtIcon from "../assets/networks/usdt-bep20.png";
+import { isRechargeLockedByPrelaunch, rechargePrelaunchMessage } from "../utils/prelaunchLock";
 
 const money = (value) => `${Number(value || 0).toFixed(2)} USDT`;
 
@@ -27,10 +28,12 @@ function imageUrl(src) {
 }
 
 export default function Home() {
+  const navigate = useNavigate();
   const [vip, setVip] = useState(null);
   const [tasks, setTasks] = useState(null);
   const [latestArticle, setLatestArticle] = useState(null);
   const [error, setError] = useState("");
+  const [rechargeNotice, setRechargeNotice] = useState("");
   const user = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
   }, []);
@@ -52,6 +55,20 @@ export default function Home() {
 
   useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    if (!rechargeNotice) return undefined;
+    const timer = setTimeout(() => setRechargeNotice(""), 2600);
+    return () => clearTimeout(timer);
+  }, [rechargeNotice]);
+
+  const handleRechargeClick = () => {
+    if (isRechargeLockedByPrelaunch()) {
+      setRechargeNotice(rechargePrelaunchMessage());
+      return;
+    }
+    navigate("/recharge");
+  };
+
   const referralId = user.referral_code || user.referralCode || user.id || "--";
   const guarantee = Number(vip?.user?.balance_usdt || 0);
   const withdrawable = Number(vip?.user?.withdrawable_usdt || 0);
@@ -67,6 +84,12 @@ export default function Home() {
 
   return (
     <div className="page-stack home-impact-v48">
+      {rechargeNotice && (
+        <div className="prelaunch-route-toast" role="status" aria-live="polite">
+          <strong>Recargas en pre-lanzamiento</strong>
+          <small>{rechargeNotice}</small>
+        </div>
+      )}
       {error && <div className="alert error">{error}</div>}
 
       <section className="impact-ai-welcome-card">
@@ -101,14 +124,14 @@ export default function Home() {
       </section>
 
       <section className="impact-action-grid" aria-label="Accesos principales">
-        <Link className="impact-action-card recharge" to="/recharge">
+        <button className="impact-action-card recharge impact-action-button" type="button" onClick={handleRechargeClick}>
           <span className="impact-action-icon"><FiCreditCard /></span>
           <div>
             <strong>Recargar</strong>
-            <small>Activar garantía</small>
+            <small>Disponible después del pre-lanzamiento</small>
           </div>
           <FiArrowRight className="impact-go" />
-        </Link>
+        </button>
 
         <Link className="impact-action-card withdraw" to="/withdraw">
           <span className="impact-action-icon"><FiRefreshCw /></span>

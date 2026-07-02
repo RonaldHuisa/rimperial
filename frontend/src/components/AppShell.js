@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { FiActivity, FiBookOpen, FiCalendar, FiCreditCard, FiGrid, FiLogOut, FiMenu, FiMessageCircle, FiMoon, FiRefreshCw, FiSettings, FiSmartphone, FiSun, FiTrendingUp, FiUser, FiUsers, FiX } from "react-icons/fi";
 import BrandLogo from "./BrandLogo";
 import ThemeToggle from "./ThemeToggle";
+import { isRechargeLockedByPrelaunch, rechargePrelaunchMessage } from "../utils/prelaunchLock";
 
 const mainNavItems = [
   { to: "/home", label: "Inicio", icon: <FiGrid /> },
@@ -18,6 +19,7 @@ export default function AppShell({ children }) {
   const [mobilePanel, setMobilePanel] = useState(null);
   const [isDesktop, setIsDesktop] = useState(() => (typeof window !== "undefined" ? window.innerWidth >= 1101 : false));
   const [adminMobilePreview, setAdminMobilePreview] = useState(() => localStorage.getItem("royal_admin_mobile_preview") === "1");
+  const [rechargeNotice, setRechargeNotice] = useState("");
   const user = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
   }, []);
@@ -79,6 +81,21 @@ export default function AppShell({ children }) {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login", { replace: true });
+  };
+
+  useEffect(() => {
+    if (!rechargeNotice) return undefined;
+    const timer = setTimeout(() => setRechargeNotice(""), 2600);
+    return () => clearTimeout(timer);
+  }, [rechargeNotice]);
+
+  const handleMobileRechargeClick = () => {
+    if (isRechargeLockedByPrelaunch()) {
+      setRechargeNotice(rechargePrelaunchMessage());
+      return;
+    }
+    setMobilePanel(null);
+    navigate("/recharge");
   };
 
 
@@ -180,14 +197,26 @@ export default function AppShell({ children }) {
             </div>
             <div className="mobile-panel-links">
               {(mobilePanel === "wallet" ? walletLinks : menuLinks).map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) => `mobile-panel-link tone-${item.tone || "default"} ${isActive ? "active" : ""}`}
-                >
-                  <span className="mobile-panel-link-icon">{item.icon}</span>
-                  <span><strong>{item.label}</strong><small>{item.note}</small></span>
-                </NavLink>
+                item.to === "/recharge" && isRechargeLockedByPrelaunch() ? (
+                  <button
+                    key={item.to}
+                    type="button"
+                    className={`mobile-panel-link mobile-panel-button tone-${item.tone || "default"}`}
+                    onClick={handleMobileRechargeClick}
+                  >
+                    <span className="mobile-panel-link-icon">{item.icon}</span>
+                    <span><strong>{item.label}</strong><small>Disponible después del pre-lanzamiento</small></span>
+                  </button>
+                ) : (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) => `mobile-panel-link tone-${item.tone || "default"} ${isActive ? "active" : ""}`}
+                  >
+                    <span className="mobile-panel-link-icon">{item.icon}</span>
+                    <span><strong>{item.label}</strong><small>{item.note}</small></span>
+                  </NavLink>
+                )
               ))}
             </div>
             {mobilePanel === "menu" && (

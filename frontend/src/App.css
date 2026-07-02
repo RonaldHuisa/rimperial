@@ -15291,3 +15291,87 @@ b,
     line-height: 1.05 !important;
   }
 }
+
+
+/* v1.0.86 — Bloqueo temporal de recargas durante pre-lanzamiento */
+.prelaunch-route-toast {
+  position: fixed;
+  left: 50%;
+  top: 18px;
+  z-index: 13000;
+  width: min(420px, calc(100vw - 28px));
+  transform: translateX(-50%);
+  padding: 13px 15px;
+  border-radius: 16px;
+  border: 1px solid rgba(215,183,122,.34);
+  background: rgba(18, 13, 26, .94);
+  color: #fff;
+  box-shadow: 0 18px 44px rgba(0,0,0,.24);
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.prelaunch-route-toast strong {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.prelaunch-route-toast small {
+  color: rgba(255,255,255,.78);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.impact-action-button {
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.impact-action-button:hover {
+  transform: translateY(-1px);
+}
+
+.mobile-panel-button {
+  width: 100%;
+  border: 1px solid var(--line);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.prelaunch-locked-recharge {
+  text-align: center;
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+}
+
+.prelaunch-locked-recharge p {
+  max-width: 620px;
+  margin-inline: auto;
+}
+
+.prelaunch-locked-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+@media (max-width: 760px) {
+  .prelaunch-route-toast {
+    top: 12px;
+    width: min(360px, calc(100vw - 20px));
+    padding: 12px 13px;
+    border-radius: 14px;
+  }
+
+  .prelaunch-locked-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

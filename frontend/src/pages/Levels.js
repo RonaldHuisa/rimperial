@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiAlertTriangle, FiCheck, FiCreditCard, FiLock, FiRefreshCw, FiXCircle } from "react-icons/fi";
 import api from "../services/api";
+import { isRechargeLockedByPrelaunch, rechargePrelaunchMessage } from "../utils/prelaunchLock";
 
 const money = (value) => `${Number(value || 0).toFixed(2)} USDT`;
 const planLabel = (pkg) => `Plan ${pkg?.name || "Royal"}`;
@@ -15,6 +16,7 @@ export default function Levels() {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [insufficient, setInsufficient] = useState(null);
   const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [prelaunchNotice, setPrelaunchNotice] = useState("");
 
   const load = async () => {
     try {
@@ -26,12 +28,27 @@ export default function Levels() {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
-    if (!insufficient) return undefined;
+    if (!prelaunchNotice) return undefined;
+    const timer = setTimeout(() => setPrelaunchNotice(""), 2600);
+    return () => clearTimeout(timer);
+  }, [prelaunchNotice]);
+
+  const showPrelaunchRechargeNotice = () => {
+    setInsufficient(null);
+    setPrelaunchNotice(rechargePrelaunchMessage());
+  };
+
+  useEffect(() => {
+    if (!insufficient || isRechargeLockedByPrelaunch()) return undefined;
     const timer = setTimeout(() => navigate("/recharge"), 1900);
     return () => clearTimeout(timer);
   }, [insufficient, navigate]);
 
   const goRecharge = () => {
+    if (isRechargeLockedByPrelaunch()) {
+      showPrelaunchRechargeNotice();
+      return;
+    }
     setInsufficient(null);
     navigate("/recharge");
   };
@@ -39,6 +56,10 @@ export default function Levels() {
   const showInsufficient = (pkg) => {
     setError("");
     setMessage("");
+    if (isRechargeLockedByPrelaunch()) {
+      showPrelaunchRechargeNotice();
+      return;
+    }
     setInsufficient({
       level: pkg.level,
       name: pkg.name,
@@ -118,6 +139,12 @@ export default function Levels() {
         </section>
       )}
 
+      {prelaunchNotice && (
+        <div className="prelaunch-route-toast" role="status" aria-live="polite">
+          <strong>Recargas en pre-lanzamiento</strong>
+          <small>{prelaunchNotice}</small>
+        </div>
+      )}
       {error && <div className="alert error">{error}</div>}
       {message && <div className="alert success">{message}</div>}
 
@@ -177,8 +204,8 @@ export default function Levels() {
               Para activar <strong>{planLabel(insufficient)}</strong> necesitas {money(insufficient.price)}.
               Tu saldo actual es {money(insufficient.balance)}.
             </p>
-            <small>Te enviaremos automáticamente a Recargar.</small>
-            <button className="recharge-popup-btn" type="button" onClick={goRecharge}>Recargar ahora</button>
+            <small>Recargas disponibles después del pre-lanzamiento.</small>
+            <button className="recharge-popup-btn" type="button" onClick={goRecharge}>Entendido</button>
           </div>
         </div>
       )}
