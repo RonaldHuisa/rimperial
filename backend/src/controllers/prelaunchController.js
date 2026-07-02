@@ -181,7 +181,7 @@ async function adminListTiktoks(req, res) {
     await ensurePrelaunchSchema(pool);
     const result = await pool.query(
       `
-      SELECT s.*, u.email, u.referral_code
+      SELECT s.*, u.id AS user_id, u.email, u.referral_code
       FROM prelaunch_tiktok_submissions s
       JOIN users u ON u.id = s.user_id
       ORDER BY s.created_at DESC
@@ -241,7 +241,7 @@ async function adminReviewTikTok(req, res) {
     if (status === "approved" && !approvedBefore.rows.length) {
       await creditRechargeBalance(client, {
         userId: submission.user_id,
-        amount: Number(submission.reward_usdt || 5),
+        amount: Number(submission.reward_usdt || 4),
         type: "prelaunch_tiktok",
         title: "Bono pre-lanzamiento TikTok",
         description: "TikTok promocional aprobado por administrador.",
