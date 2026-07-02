@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FiActivity, FiAlertTriangle, FiAward, FiBarChart2, FiCheckCircle, FiCreditCard, FiDatabase, FiDollarSign, FiEdit3, FiExternalLink, FiFilter, FiRefreshCw, FiSearch, FiShield, FiSliders, FiUsers, FiMessageCircle, FiBookOpen, FiPlus, FiTrash2, FiUpload, FiGift, FiVideo } from "react-icons/fi";
+import { FiActivity, FiAlertTriangle, FiAward, FiBarChart2, FiCheckCircle, FiCopy, FiCreditCard, FiDatabase, FiDollarSign, FiEdit3, FiExternalLink, FiFilter, FiRefreshCw, FiSearch, FiShield, FiSliders, FiUsers, FiMessageCircle, FiBookOpen, FiPlus, FiTrash2, FiUpload, FiGift, FiVideo } from "react-icons/fi";
 import api from "../services/api";
 import { FaWhatsapp } from "react-icons/fa";
 import MetricCard from "../components/MetricCard";
@@ -25,6 +25,17 @@ const money = (value) => `${Number(value || 0).toFixed(2)} USDT`;
 const shortDate = (value) => value ? new Date(value).toLocaleString() : "—";
 const compact = (value) => Number(value || 0).toLocaleString();
 const safeText = (value, fallback = "—") => value === null || value === undefined || value === "" ? fallback : value;
+const shortAddress = (value) => {
+  const text = String(value || "");
+  if (text.length <= 18) return text || "—";
+  return `${text.slice(0, 10)}...${text.slice(-8)}`;
+};
+const scanUrl = (network, address) => {
+  if (!address) return "";
+  if (network === "POLYGON-USDT") return `https://polygonscan.com/address/${address}`;
+  if (network === "BEP20-USDT") return `https://bscscan.com/address/${address}`;
+  return "";
+};
 
 function toDateTimeLocal(value) {
   if (!value) return "";
@@ -245,6 +256,19 @@ function UserDetailModal({ detail, onClose, onChanged }) {
   const [rouletteForm, setRouletteForm] = useState({ operation: "add", points: "", reason: "" });
   const [rouletteMessage, setRouletteMessage] = useState("");
   const [rouletteError, setRouletteError] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
+
+  const copyToClipboard = async (value, label = "Dato") => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyMessage(`${label} copiado.`);
+      window.clearTimeout(window.__royalAdminWalletCopyTimer);
+      window.__royalAdminWalletCopyTimer = window.setTimeout(() => setCopyMessage(""), 1600);
+    } catch (_) {
+      setCopyMessage("No se pudo copiar. Copia manualmente la dirección.");
+    }
+  };
 
   const submitBalanceAdjustment = async (e) => {
     e.preventDefault();
@@ -307,12 +331,36 @@ function UserDetailModal({ detail, onClose, onChanged }) {
             <p><strong>Celular:</strong> {u.phone_country_code || ""} {u.phone_number || "No registrado"}</p>
             <p><strong>Estado retiro:</strong> {u.withdraw_enabled ? <StatusBadge tone="success">Habilitado</StatusBadge> : <StatusBadge tone="warning">Pendiente</StatusBadge>}</p>
           </div>
-          <div className="panel-card no-shadow admin-user-profile-card">
-            <div className="section-title"><span>Cuentas de retiro</span><h3>Wallets registradas</h3></div>
-            <div className="admin-account-list">
-              {(detail.withdrawalAccounts || []).length === 0 && <span className="muted-text">Sin cuentas registradas.</span>}
-              {(detail.withdrawalAccounts || []).map((acc) => <div key={acc.id}><strong>{acc.label || acc.network}</strong><small>{acc.network} · {String(acc.withdrawal_address || "").slice(0,10)}...{String(acc.withdrawal_address || "").slice(-8)}</small></div>)}
+
+          <div className="panel-card no-shadow admin-user-profile-card admin-deposit-wallet-card">
+            <div className="section-title"><span>Wallets de recarga</span><h3>Direcciones asignadas</h3></div>
+            {copyMessage && <div className="admin-copy-note">{copyMessage}</div>}
+            <div className="admin-deposit-wallet-list">
+              {(detail.depositWallets || []).length === 0 && <span className="muted-text">Sin wallets automáticas asignadas.</span>}
+              {(detail.depositWallets || []).map((wallet) => {
+                const explorer = scanUrl(wallet.network, wallet.address);
+                return (
+                  <div className="admin-deposit-wallet-row" key={wallet.id || wallet.network}>
+                    <div>
+                      <strong>{wallet.network}</strong>
+                      <small>{shortAddress(wallet.address)}</small>
+                    </div>
+                    <div className="admin-deposit-wallet-actions">
+                      <button type="button" onClick={() => copyToClipboard(wallet.address, wallet.network)}><FiCopy /> Copiar</button>
+                      {explorer && <a href={explorer} target="_blank" rel="noreferrer"><FiExternalLink /> Scan</a>}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          </div>
+        </div>
+
+        <div className="panel-card no-shadow admin-user-profile-card">
+          <div className="section-title"><span>Cuentas de retiro</span><h3>Wallets registradas por el usuario</h3></div>
+          <div className="admin-account-list">
+            {(detail.withdrawalAccounts || []).length === 0 && <span className="muted-text">Sin cuentas registradas.</span>}
+            {(detail.withdrawalAccounts || []).map((acc) => <div key={acc.id}><strong>{acc.label || acc.network}</strong><small>{acc.network} · {shortAddress(acc.withdrawal_address)}</small></div>)}
           </div>
         </div>
 

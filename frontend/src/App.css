@@ -15375,3 +15375,97 @@ b,
     grid-template-columns: 1fr;
   }
 }
+
+
+/* v1.0.87 — Admin usuario: wallets automáticas de recarga */
+.admin-deposit-wallet-card {
+  min-width: 0;
+}
+
+.admin-deposit-wallet-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-deposit-wallet-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(126,100,232,.045);
+}
+
+.admin-deposit-wallet-row strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.2;
+  margin-bottom: 3px;
+}
+
+.admin-deposit-wallet-row small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.admin-deposit-wallet-actions {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.admin-deposit-wallet-actions button,
+.admin-deposit-wallet-actions a {
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--surface-solid);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 850;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-deposit-wallet-actions button:hover,
+.admin-deposit-wallet-actions a:hover {
+  border-color: rgba(126,100,232,.34);
+}
+
+.admin-copy-note {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(31,170,119,.12);
+  color: #1f8f67;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+@media (max-width: 760px) {
+  .admin-deposit-wallet-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .admin-deposit-wallet-actions {
+    justify-content: stretch;
+  }
+
+  .admin-deposit-wallet-actions button,
+  .admin-deposit-wallet-actions a {
+    flex: 1;
+    justify-content: center;
+  }
+}
