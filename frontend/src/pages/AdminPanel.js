@@ -841,11 +841,27 @@ function PrelaunchAdminPanel() {
       {error && <div className="alert error">{error}</div>}
       {message && <div className="alert success">{message}</div>}
 
-      <div className="admin-metrics small-grid">
-        <MetricCard title="TikToks pendientes" value={compact(tiktokStats.pending)} icon={FiVideo} tone="warning" />
-        <MetricCard title="TikToks aprobados" value={compact(tiktokStats.approved)} icon={FiCheckCircle} tone="success" />
-        <MetricCard title="TikToks rechazados" value={compact(tiktokStats.rejected)} icon={FiAlertTriangle} tone="danger" />
-        <MetricCard title="Bono máximo" value={money(overview?.config?.maxBonusUsdt || 10)} icon={FiGift} />
+      <div className="prelaunch-admin-stat-grid">
+        <article className="prelaunch-admin-stat-card warning">
+          <span><FiVideo /></span>
+          <small>TikToks pendientes</small>
+          <strong>{compact(tiktokStats.pending)}</strong>
+        </article>
+        <article className="prelaunch-admin-stat-card success">
+          <span><FiCheckCircle /></span>
+          <small>TikToks aprobados</small>
+          <strong>{compact(tiktokStats.approved)}</strong>
+        </article>
+        <article className="prelaunch-admin-stat-card danger">
+          <span><FiAlertTriangle /></span>
+          <small>TikToks rechazados</small>
+          <strong>{compact(tiktokStats.rejected)}</strong>
+        </article>
+        <article className="prelaunch-admin-stat-card bonus">
+          <span><FiGift /></span>
+          <small>Bono máximo</small>
+          <strong>{money(overview?.config?.maxBonusUsdt || 10)}</strong>
+        </article>
       </div>
 
       <div className="two-columns admin-two wide-left">

@@ -15185,3 +15185,109 @@ b,
 .admin-guide-list b {
   color: var(--text);
 }
+
+
+/* v1.0.85 — Pre-lanzamiento admin: métricas visibles en móvil */
+.prelaunch-admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.prelaunch-admin-stat-card {
+  min-height: 118px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  box-shadow: none;
+}
+
+.prelaunch-admin-stat-card > span {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  font-size: 19px;
+  background: rgba(126,100,232,.12);
+  color: var(--brand);
+}
+
+.prelaunch-admin-stat-card small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.prelaunch-admin-stat-card strong {
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.05;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.prelaunch-admin-stat-card.warning > span {
+  color: #b78713;
+  background: rgba(215,183,122,.18);
+}
+
+.prelaunch-admin-stat-card.success > span {
+  color: #1faa77;
+  background: rgba(31,170,119,.14);
+}
+
+.prelaunch-admin-stat-card.danger > span {
+  color: #ef5261;
+  background: rgba(239,82,97,.13);
+}
+
+.prelaunch-admin-stat-card.bonus > span {
+  color: var(--gold-strong);
+  background: rgba(215,183,122,.18);
+}
+
+@media (max-width: 900px) {
+  .prelaunch-admin-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .prelaunch-admin-stat-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .prelaunch-admin-stat-card {
+    min-height: auto;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: center;
+    padding: 14px 16px;
+    gap: 6px 12px;
+  }
+
+  .prelaunch-admin-stat-card > span {
+    grid-row: span 2;
+  }
+
+  .prelaunch-admin-stat-card small {
+    display: block !important;
+    color: var(--muted) !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+  }
+
+  .prelaunch-admin-stat-card strong {
+    display: block !important;
+    font-size: 20px !important;
+    line-height: 1.05 !important;
+  }
+}
