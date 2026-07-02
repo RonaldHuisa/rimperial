@@ -310,7 +310,7 @@ async function getAdminUserDetail(req, res) {
   const userId = Number(req.params.userId);
   if (!userId) return res.status(400).json({ message: "Usuario inválido." });
   try {
-    const [user, deposits, withdrawals, tasks, ledger, referrals, withdrawalAccounts] = await Promise.all([
+    const [user, deposits, withdrawals, tasks, ledger, referrals, withdrawalAccounts, depositWallets] = await Promise.all([
       pool.query(`SELECT id,email,referral_code,referred_by_id,created_at,balance_usdt,recharge_balance_usdt,withdrawable_usdt,earnings_balance_usdt,is_admin,is_banned,banned_reason,is_suspicious,suspicious_reason,register_ip,last_login_ip,last_login_at,full_name,phone_country_iso,phone_country_name,phone_country_code,phone_number,COALESCE(credit_points,50) AS credit_points,COALESCE(roulette_points,0) AS roulette_points,COALESCE(withdraw_enabled,false) AS withdraw_enabled,withdraw_enabled_at,withdraw_enabled_note FROM users WHERE id=$1`, [userId]),
       pool.query(`SELECT id,network,amount_usdt,status,sweep_status,tx_hash,created_at FROM deposits WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20`, [userId]),
       pool.query(`SELECT id,network,amount_requested,amount_to_receive,status,tx_hash,created_at,paid_at FROM withdrawals WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20`, [userId]),
@@ -322,9 +322,31 @@ async function getAdminUserDetail(req, res) {
       pool.query(`SELECT id,balance_type,direction,type,title,amount_usdt,status,created_at FROM account_ledger WHERE user_id=$1 ORDER BY created_at DESC LIMIT 30`, [userId]),
       pool.query(`SELECT id,email,created_at,is_banned,is_suspicious FROM users WHERE referred_by_id=$1 ORDER BY created_at DESC LIMIT 30`, [userId]),
       pool.query(`SELECT id,network,label,withdrawal_address,is_default,created_at,updated_at FROM user_withdrawal_accounts WHERE user_id=$1 ORDER BY is_default DESC, network ASC`, [userId]),
+      pool.query(`
+        SELECT id,network,address,public_key,created_at
+        FROM wallets
+        WHERE user_id=$1
+        ORDER BY
+          CASE
+            WHEN network='BEP20-USDT' THEN 1
+            WHEN network='POLYGON-USDT' THEN 2
+            ELSE 9
+          END,
+          network ASC,
+          id ASC
+      `, [userId]),
     ]);
     if (!user.rows.length) return res.status(404).json({ message: "Usuario no encontrado." });
-    return res.json({ user: user.rows[0], deposits: deposits.rows, withdrawals: withdrawals.rows, tasks: tasks.rows, ledger: ledger.rows, referrals: referrals.rows, withdrawalAccounts: withdrawalAccounts.rows });
+    return res.json({
+      user: user.rows[0],
+      deposits: deposits.rows,
+      withdrawals: withdrawals.rows,
+      tasks: tasks.rows,
+      ledger: ledger.rows,
+      referrals: referrals.rows,
+      withdrawalAccounts: withdrawalAccounts.rows,
+      depositWallets: depositWallets.rows,
+    });
   } catch (error) {
     console.error("ADMIN USER DETAIL ERROR:", error);
     return res.status(500).json({ message: "Error al cargar detalle de usuario.", detail: error.message });
