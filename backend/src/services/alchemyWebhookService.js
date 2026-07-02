@@ -512,6 +512,10 @@ async function updateAlchemyWebhookAddresses({ webhookId, addressesToAdd = [], a
   let removed = 0;
   const maxChunkSize = Number(process.env.ALCHEMY_WEBHOOK_ADDRESS_CHUNK_SIZE || 500);
 
+  if (addList.length === 0 && removeList.length === 0) {
+    return { added: 0, removed: 0, skipped: true, reason: "empty_address_list" };
+  }
+
   for (let index = 0; index < Math.max(addList.length, removeList.length, 1); index += maxChunkSize) {
     const addChunk = addList.slice(index, index + maxChunkSize);
     const removeChunk = removeList.slice(index, index + maxChunkSize);

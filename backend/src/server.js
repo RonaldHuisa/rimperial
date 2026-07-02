@@ -15,6 +15,7 @@ const referralRoutes = require("./routes/referralRoutes");
 const vipRoutes = require("./routes/vipRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const prelaunchRoutes = require("./routes/prelaunchRoutes");
+const alchemyWebhookRoutes = require("./routes/alchemyWebhookRoutes");
 const { startAutomaticDepositScanner } = require("./services/depositScannerService");
 const { apiRateLimiter } = require("./middleware/rateLimitMiddleware");
 
@@ -87,7 +88,7 @@ app.use("/api", (req, res, next) => {
   next();
 });
 
-app.get("/", (req, res) => res.json({ message: "Backend Royal Imperial AI funcionando correctamente.", version: "1.0.87" }));
+app.get("/", (req, res) => res.json({ message: "Backend Royal Imperial AI funcionando correctamente.", version: "1.0.88" }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/wallet", walletRoutes);
@@ -102,6 +103,7 @@ app.use("/api/referrals", referralRoutes);
 app.use("/api/vip", vipRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/prelaunch", prelaunchRoutes);
+app.use("/api/webhooks/alchemy", alchemyWebhookRoutes);
 
 
 app.use((err, req, res, next) => {
