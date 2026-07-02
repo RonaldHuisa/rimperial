@@ -15029,3 +15029,159 @@ b,
     width: 100%;
   }
 }
+
+
+/* v1.0.83 — Home móvil liviano y estable
+   Mantiene el diseño visual, pero evita fallos de renderizado en algunos Android/Chrome:
+   menos blur, menos filtros, fondos más simples y menos capas GPU. */
+@media (max-width: 760px) {
+  body {
+    background:
+      linear-gradient(135deg, var(--bg), var(--cream)) !important;
+  }
+
+  :root[data-theme="dark"] body {
+    background:
+      linear-gradient(135deg, #11091d, var(--bg)) !important;
+  }
+
+  .topbar,
+  .mobile-nav,
+  .global-loading-backdrop {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .topbar {
+    background: transparent !important;
+  }
+
+  .mobile-nav {
+    background: rgba(255, 255, 255, .96) !important;
+    box-shadow: 0 10px 26px rgba(38, 27, 66, .10) !important;
+  }
+
+  :root[data-theme="dark"] .mobile-nav {
+    background: rgba(31, 19, 50, .96) !important;
+  }
+
+  .home-impact-v48,
+  .home-impact-v48 * {
+    -webkit-backface-visibility: visible !important;
+    backface-visibility: visible !important;
+    will-change: auto !important;
+  }
+
+  .home-impact-v48 .impact-ai-welcome-card,
+  .home-impact-v48 .home-impact-hero,
+  .home-impact-v48 .impact-action-card,
+  .home-impact-v48 .impact-metric-card,
+  .home-impact-v48 .impact-progress-card,
+  .home-impact-v48 .impact-links-panel {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    filter: none !important;
+    transform: none !important;
+    box-shadow: 0 8px 22px rgba(44, 32, 78, .045) !important;
+  }
+
+  .home-impact-v48 .impact-ai-welcome-card {
+    background:
+      linear-gradient(135deg, rgba(255,255,255,.94), rgba(238,230,255,.90)) !important;
+  }
+
+  .home-impact-v48 .home-impact-hero {
+    background:
+      linear-gradient(135deg, rgba(255,255,255,.95), rgba(238,230,255,.92)) !important;
+  }
+
+  :root[data-theme="dark"] .home-impact-v48 .impact-ai-welcome-card,
+  :root[data-theme="dark"] .home-impact-v48 .home-impact-hero {
+    background:
+      linear-gradient(135deg, rgba(43,28,69,.96), rgba(31,19,50,.96)) !important;
+  }
+
+  .home-impact-v48 .impact-ai-welcome-card > img,
+  .home-impact-v48 .brand-logo img,
+  .home-impact-v48 img {
+    filter: none !important;
+  }
+
+  .home-impact-v48 .impact-podium {
+    background: rgba(147, 96, 255, .13) !important;
+    box-shadow: none !important;
+  }
+
+  .home-impact-v48 .impact-spark {
+    display: none !important;
+  }
+
+  .home-impact-v48 .impact-watermark,
+  .home-impact-v48 .impact-line-art {
+    opacity: .55 !important;
+  }
+
+  .home-impact-v48 .impact-reward-badge {
+    background: rgba(215,183,122,.16) !important;
+  }
+
+  .global-loading-backdrop {
+    background: rgba(15, 12, 20, .24) !important;
+  }
+
+  .global-loading-box {
+    box-shadow: 0 12px 28px rgba(0,0,0,.18) !important;
+  }
+}
+
+@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+  .home-impact-v48 *,
+  .global-loading-dot {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+
+/* v1.0.84 — Admin pre-lanzamiento / TikTok */
+.admin-prelaunch-page .admin-user-cell {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-prelaunch-page .admin-user-cell strong {
+  color: var(--text);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.admin-prelaunch-page .admin-user-cell small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.admin-prelaunch-page .admin-open-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-prelaunch-guide {
+  align-self: start;
+}
+
+.admin-guide-list {
+  display: grid;
+  gap: 10px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.admin-guide-list p {
+  margin: 0;
+}
+
+.admin-guide-list strong,
+.admin-guide-list b {
+  color: var(--text);
+}

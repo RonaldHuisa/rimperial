@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FiActivity, FiAlertTriangle, FiAward, FiBarChart2, FiCheckCircle, FiCreditCard, FiDatabase, FiDollarSign, FiEdit3, FiFilter, FiRefreshCw, FiSearch, FiShield, FiSliders, FiUsers, FiMessageCircle, FiBookOpen, FiPlus, FiTrash2, FiUpload, FiGift } from "react-icons/fi";
+import { FiActivity, FiAlertTriangle, FiAward, FiBarChart2, FiCheckCircle, FiCreditCard, FiDatabase, FiDollarSign, FiEdit3, FiExternalLink, FiFilter, FiRefreshCw, FiSearch, FiShield, FiSliders, FiUsers, FiMessageCircle, FiBookOpen, FiPlus, FiTrash2, FiUpload, FiGift, FiVideo } from "react-icons/fi";
 import api from "../services/api";
 import { FaWhatsapp } from "react-icons/fa";
 import MetricCard from "../components/MetricCard";
@@ -13,6 +13,7 @@ const tabs = [
   { key: "withdrawals", label: "Retiros", icon: <FiDollarSign /> },
   { key: "levels", label: "Niveles", icon: <FiSliders /> },
   { key: "support", label: "Soporte", icon: <FiMessageCircle /> },
+  { key: "prelaunch", label: "Pre-lanzamiento", icon: <FiVideo /> },
   { key: "news", label: "Noticias", icon: <FiBookOpen /> },
   { key: "redeemCodes", label: "Códigos", icon: <FiGift /> },
   { key: "roulette", label: "Ruleta", icon: <FiRefreshCw /> },
@@ -204,7 +205,7 @@ function UsersPanel() {
       <div className="admin-filter-card panel-card">
         <div className="filter-title"><FiFilter /><strong>Filtros de usuarios</strong></div>
         <div className="admin-filters">
-          <label><span>Buscar correo</span><input value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))} placeholder="correo@dominio.com" /></label>
+          <label><span>Buscar correo o ID</span><input value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))} placeholder="correo@dominio.com o ID de usuario" /></label>
           <label><span>Estado</span><select value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}><option value="all">Todos</option><option value="normal">Normal</option><option value="admin">Admin</option><option value="suspicious">Sospechoso</option><option value="banned">Baneado</option></select></label>
           <label><span>Nivel</span><select value={filters.level} onChange={(e) => setFilters((f) => ({ ...f, level: e.target.value }))}><option value="">Todos</option>{Array.from({ length: 9 }).map((_, i) => <option key={i} value={i}>{i === 0 ? "Nivel 0 · Pasantía" : `Nivel ${i}`}</option>)}</select></label>
           <button className="primary-btn" type="button" onClick={() => load(1)} disabled={loading}><FiSearch /> Buscar</button>
@@ -215,6 +216,7 @@ function UsersPanel() {
         <AdminTable
           rows={rows}
           columns={[
+            { key: "id", label: "ID", render: (r) => <button className="link-btn" onClick={() => openDetail(r.id)}>#{r.id}</button> },
             { key: "email", label: "Usuario", render: (r) => <button className="link-btn" onClick={() => openDetail(r.id)}>{r.email}</button> },
             { key: "active_level", label: "Nivel", render: (r) => r.active_level ? `Nivel ${r.active_level}` : "Sin nivel" },
             { key: "withdrawable_usdt", label: "Retirable", render: (r) => money(r.withdrawable_usdt) },
@@ -769,6 +771,135 @@ function SupportAdminPanel() {
   );
 }
 
+function PrelaunchAdminPanel() {
+  const [overview, setOverview] = useState(null);
+  const [rows, setRows] = useState([]);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [overviewRes, tiktoksRes] = await Promise.all([
+        api.get("/prelaunch/admin/overview"),
+        api.get("/prelaunch/admin/tiktoks"),
+      ]);
+      setOverview(overviewRes.data || null);
+      setRows(tiktoksRes.data.items || []);
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || "Error al cargar pre-lanzamiento.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load().catch(() => {}); }, [load]);
+
+  const statusTone = (status) => {
+    if (status === "approved") return "success";
+    if (status === "pending") return "warning";
+    if (status === "rejected") return "danger";
+    return "neutral";
+  };
+
+  const statusText = (status) => {
+    if (status === "approved") return "Aprobado";
+    if (status === "pending") return "Pendiente";
+    if (status === "rejected") return "Rechazado";
+    return status || "—";
+  };
+
+  const tiktokStats = useMemo(() => {
+    const base = { pending: 0, approved: 0, rejected: 0 };
+    (overview?.stats?.tiktoks || []).forEach((item) => {
+      base[item.status] = Number(item.total || 0);
+    });
+    return base;
+  }, [overview]);
+
+  const review = async (row, status) => {
+    const note = status === "rejected"
+      ? window.prompt("Motivo opcional del rechazo:", row.admin_note || "")
+      : "";
+    if (note === null) return;
+
+    setMessage("");
+    setError("");
+    try {
+      const res = await api.post(`/prelaunch/admin/tiktoks/${row.id}/review`, { status, note });
+      setMessage(res.data?.message || (status === "approved" ? "TikTok aprobado." : "TikTok rechazado."));
+      await load();
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.response?.data?.detail || err?.message || "Error al revisar TikTok.");
+    }
+  };
+
+  return (
+    <div className="page-stack admin-prelaunch-page">
+      {error && <div className="alert error">{error}</div>}
+      {message && <div className="alert success">{message}</div>}
+
+      <div className="admin-metrics small-grid">
+        <MetricCard title="TikToks pendientes" value={compact(tiktokStats.pending)} icon={FiVideo} tone="warning" />
+        <MetricCard title="TikToks aprobados" value={compact(tiktokStats.approved)} icon={FiCheckCircle} tone="success" />
+        <MetricCard title="TikToks rechazados" value={compact(tiktokStats.rejected)} icon={FiAlertTriangle} tone="danger" />
+        <MetricCard title="Bono máximo" value={money(overview?.config?.maxBonusUsdt || 10)} icon={FiGift} />
+      </div>
+
+      <div className="two-columns admin-two wide-left">
+        <div className="panel-card">
+          <div className="section-title">
+            <span>Pre-lanzamiento</span>
+            <h3>Enlaces de TikTok enviados</h3>
+          </div>
+          <AdminTable
+            rows={rows}
+            empty="Aún no hay enlaces de TikTok enviados."
+            columns={[
+              { key: "user", label: "Usuario", render: (r) => <div className="admin-user-cell"><strong>{r.email}</strong><small>ID {r.user_id || r.userId} · Ref {r.referral_code || "—"}</small></div> },
+              { key: "tiktok_url", label: "Enlace", render: (r) => r.tiktok_url ? <a className="admin-open-link" href={r.tiktok_url} target="_blank" rel="noreferrer"><FiExternalLink /> Abrir TikTok</a> : "—" },
+              { key: "reward_usdt", label: "Bono", render: (r) => money(r.reward_usdt || 4) },
+              { key: "status", label: "Estado", render: (r) => <StatusBadge tone={statusTone(r.status)}>{statusText(r.status)}</StatusBadge> },
+              { key: "created_at", label: "Enviado", render: (r) => shortDate(r.created_at) },
+              { key: "admin_note", label: "Nota", render: (r) => r.admin_note || "—" },
+              {
+                key: "actions",
+                label: "Acciones",
+                render: (r) => (
+                  <div className="table-actions">
+                    <button onClick={() => review(r, "approved")} disabled={r.status === "approved"}><FiCheckCircle /> Aprobar</button>
+                    <button onClick={() => review(r, "rejected")} disabled={r.status === "approved"}><FiAlertTriangle /> Rechazar</button>
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </div>
+
+        <div className="panel-card admin-prelaunch-guide">
+          <div className="section-title">
+            <span>Administración</span>
+            <h3>Cómo validar TikToks</h3>
+          </div>
+          <div className="admin-guide-list">
+            <p><strong>1.</strong> Abre el enlace enviado por el usuario.</p>
+            <p><strong>2.</strong> Verifica que promocione Royal Imperial AI.</p>
+            <p><strong>3.</strong> Pulsa <b>Aprobar</b> para acreditar el bono.</p>
+            <p><strong>4.</strong> Pulsa <b>Rechazar</b> si no cumple y agrega una nota.</p>
+          </div>
+          <div className="upload-note">
+            <small>Al aprobar, el bono se acredita al saldo de garantía del usuario. Si el usuario ya tenía un TikTok aprobado, no se duplica el bono.</small>
+          </div>
+          <button className="secondary-btn full" type="button" onClick={load} disabled={loading}><FiRefreshCw /> Actualizar lista</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 const emptySection = () => ({ id: `${Date.now()}-${Math.random()}`, type: "paragraph", title: "", text: "", imageUrl: "", imageAlt: "" });
 function NewsAdminPanel() {
   const [rows, setRows] = useState([]);
@@ -1278,6 +1409,7 @@ export default function AdminPanel() {
       {activeTab === "withdrawals" && <WithdrawalsPanel />}
       {activeTab === "levels" && <LevelsPanel />}
       {activeTab === "support" && <SupportAdminPanel />}
+      {activeTab === "prelaunch" && <PrelaunchAdminPanel />}
       {activeTab === "news" && <NewsAdminPanel />}
       {activeTab === "redeemCodes" && <RedeemCodesAdminPanel />}
       {activeTab === "roulette" && <RouletteAdminPanel />}
