@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 
 export default function GlobalLoading() {
   const [visible, setVisible] = useState(false);
+  const [isMobileSafe, setIsMobileSafe] = useState(() => typeof window !== "undefined" && window.innerWidth <= 760);
   const [message, setMessage] = useState("Cargando...");
   const counter = useRef(0);
   const timer = useRef(null);
@@ -37,7 +38,7 @@ export default function GlobalLoading() {
     };
   }, []);
 
-  if (!visible) return null;
+  if (!visible || isMobileSafe) return null;
   return (
     <div className="global-loading-backdrop global-loading-mobile-safe" role="status" aria-live="polite">
       <div className="global-loading-box">

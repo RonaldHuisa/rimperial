@@ -34,6 +34,7 @@ export default function Home() {
   const [latestArticle, setLatestArticle] = useState(null);
   const [error, setError] = useState("");
   const [rechargeNotice, setRechargeNotice] = useState("");
+  const [mobileSafe, setMobileSafe] = useState(() => typeof window !== "undefined" && window.innerWidth <= 760);
   const user = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
   }, []);
@@ -54,6 +55,13 @@ export default function Home() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const update = () => setMobileSafe(window.innerWidth <= 760);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   useEffect(() => {
     if (!rechargeNotice) return undefined;
@@ -81,6 +89,78 @@ export default function Home() {
   const activePlanPackage = (vip?.packages || []).find((item) => Number(item.level) === Number(activePurchase?.level));
   const planName = activePurchase ? `Plan ${activePlanPackage?.name || activePurchase.level}` : "Pasantía";
   const activityLabel = completed > 0 ? "Activa" : "Pendiente";
+
+  if (mobileSafe) {
+    return (
+      <div className="page-stack home-safe-mobile">
+        {rechargeNotice && (
+          <div className="prelaunch-route-toast" role="status" aria-live="polite">
+            <strong>Recargas en pre-lanzamiento</strong>
+            <small>{rechargeNotice}</small>
+          </div>
+        )}
+        {error && <div className="alert error">{error}</div>}
+
+        <section className="safe-welcome-card">
+          <span>Bienvenido ID {referralId}</span>
+          <h2>Entrena la IA financiera</h2>
+          <p>Completa tus tareas diarias y revisa tu progreso sin complicaciones.</p>
+        </section>
+
+        <section className="safe-balance-card">
+          <div>
+            <span>Saldo retirable</span>
+            <strong>{withdrawable.toFixed(2)} <small>USDT</small></strong>
+          </div>
+          <div className="safe-usdt-badge">USDT</div>
+        </section>
+
+        <section className="safe-action-grid" aria-label="Accesos principales">
+          <button type="button" onClick={handleRechargeClick}>
+            <FiCreditCard />
+            <span><strong>Recargar</strong><small>Disponible después del pre-lanzamiento</small></span>
+          </button>
+          <Link to="/withdraw">
+            <FiRefreshCw />
+            <span><strong>Retirar</strong><small>Cobrar recompensa</small></span>
+          </Link>
+        </section>
+
+        <section className="safe-metric-grid" aria-label="Resumen principal">
+          <article>
+            <FiShield />
+            <span>Garantía activa</span>
+            <strong>{guarantee.toFixed(2)} USDT</strong>
+          </article>
+          <article>
+            <FiCpu />
+            <span>Misiones IA de hoy</span>
+            <strong>{completed} / {taskLimit}</strong>
+            <small>{remaining} pendiente{remaining === 1 ? "" : "s"}</small>
+          </article>
+          <article>
+            <FiTarget />
+            <span>Rendimiento IA</span>
+            <strong>{precision}%</strong>
+            <small>Precisión semanal</small>
+          </article>
+          <article>
+            <FiZap />
+            <span>Actividad diaria</span>
+            <strong>{activityLabel}</strong>
+            <small>{completed > 0 ? "Sigue completando tareas" : "Inicia tus tareas IA"}</small>
+          </article>
+        </section>
+
+        <section className="safe-links-panel" aria-label="Accesos secundarios">
+          <Link to="/levels"><FiTrendingUp /><span><strong>Planes</strong><small>Activa o mejora tu nivel</small></span><FiArrowRight /></Link>
+          <Link to="/history"><FiBookOpen /><span><strong>Movimientos</strong><small>Historial de cuenta</small></span><FiArrowRight /></Link>
+          <Link to="/support"><FiHeadphones /><span><strong>Centro de ayuda</strong><small>Soporte oficial</small></span><FiArrowRight /></Link>
+          <Link to="/prelaunch"><FiZap /><span><strong>Pre-lanzamiento</strong><small>Bono fundador activo</small></span><FiArrowRight /></Link>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="page-stack home-impact-v48">
