@@ -16033,3 +16033,135 @@ b,
     font-size: 30px;
   }
 }
+
+
+/* v1.0.91 — Móvil modo oscuro real sin gradientes
+   Corrige fondo blanco en Home seguro móvil cuando el tema está en oscuro.
+   No usa gradientes: fondo sólido + cards diferenciadas. */
+@media (max-width: 760px) {
+  :root[data-theme="dark"] html,
+  :root[data-theme="dark"] body,
+  :root[data-theme="dark"] #root {
+    background: #12091f !important;
+  }
+
+  :root[data-theme="dark"] body {
+    background-image: none !important;
+    color: #f5efff !important;
+  }
+
+  :root[data-theme="dark"] .app-shell,
+  :root[data-theme="dark"] .main-panel,
+  :root[data-theme="dark"] .content-area,
+  :root[data-theme="dark"] .page-stack,
+  :root[data-theme="dark"] .home-safe-mobile {
+    background: #12091f !important;
+    background-image: none !important;
+  }
+
+  :root[data-theme="dark"] .home-safe-mobile {
+    color: #f5efff !important;
+  }
+
+  :root[data-theme="dark"] .safe-welcome-card,
+  :root[data-theme="dark"] .safe-balance-card,
+  :root[data-theme="dark"] .safe-action-grid button,
+  :root[data-theme="dark"] .safe-action-grid a,
+  :root[data-theme="dark"] .safe-metric-grid article,
+  :root[data-theme="dark"] .safe-links-panel {
+    background: #241336 !important;
+    background-image: none !important;
+    border-color: #3d2958 !important;
+    color: #f5efff !important;
+  }
+
+  :root[data-theme="dark"] .safe-welcome-card {
+    background: #28173d !important;
+  }
+
+  :root[data-theme="dark"] .safe-balance-card {
+    background: #28173d !important;
+  }
+
+  :root[data-theme="dark"] .safe-welcome-card h2,
+  :root[data-theme="dark"] .safe-balance-card strong,
+  :root[data-theme="dark"] .safe-action-grid strong,
+  :root[data-theme="dark"] .safe-metric-grid strong,
+  :root[data-theme="dark"] .safe-links-panel strong {
+    color: #ffffff !important;
+  }
+
+  :root[data-theme="dark"] .safe-welcome-card p,
+  :root[data-theme="dark"] .safe-balance-card span,
+  :root[data-theme="dark"] .safe-action-grid small,
+  :root[data-theme="dark"] .safe-metric-grid span,
+  :root[data-theme="dark"] .safe-metric-grid small,
+  :root[data-theme="dark"] .safe-links-panel small {
+    color: #cfc3e6 !important;
+  }
+
+  :root[data-theme="dark"] .safe-welcome-card span {
+    background: #3a2358 !important;
+    color: #bda7ff !important;
+  }
+
+  :root[data-theme="dark"] .safe-usdt-badge {
+    background: #173d3b !important;
+    border-color: #24615c !important;
+    color: #47f0c0 !important;
+  }
+
+  :root[data-theme="dark"] .safe-action-grid svg,
+  :root[data-theme="dark"] .safe-metric-grid article > svg {
+    background: #342050 !important;
+    color: #bda7ff !important;
+  }
+
+  :root[data-theme="dark"] .safe-links-panel a {
+    border-bottom-color: #3d2958 !important;
+  }
+
+  :root[data-theme="dark"] .safe-links-panel a > svg:first-child {
+    background: #3a2d20 !important;
+    color: #d7b77a !important;
+  }
+
+  :root[data-theme="dark"] .safe-links-panel a > svg:last-child {
+    color: #cfc3e6 !important;
+  }
+
+  :root[data-theme="dark"] .mobile-nav {
+    background: #1d102c !important;
+    background-image: none !important;
+    border-color: #3d2958 !important;
+    box-shadow: none !important;
+  }
+
+  :root[data-theme="dark"] .mobile-nav a,
+  :root[data-theme="dark"] .mobile-nav button {
+    color: #cfc3e6 !important;
+  }
+
+  :root[data-theme="dark"] .mobile-nav a.active,
+  :root[data-theme="dark"] .mobile-nav button.active {
+    background: #2f1d47 !important;
+    border-color: #6c4ca2 !important;
+    color: #ffffff !important;
+  }
+
+  :root[data-theme="dark"] .topbar,
+  :root[data-theme="dark"] .mobile-top-brand,
+  :root[data-theme="dark"] .brand-logo,
+  :root[data-theme="dark"] .brand-mark {
+    background: transparent !important;
+    background-image: none !important;
+  }
+
+  :root[data-theme="dark"] .brand-logo span,
+  :root[data-theme="dark"] .brand-logo small,
+  :root[data-theme="dark"] .mobile-top-brand span,
+  :root[data-theme="dark"] .mobile-top-brand small {
+    color: #f5efff !important;
+    opacity: .92 !important;
+  }
+}
