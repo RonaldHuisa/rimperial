@@ -15469,3 +15469,274 @@ b,
     justify-content: center;
   }
 }
+
+
+/* v1.0.89 — Modo móvil estable para celulares de gama baja/media
+   Corrige artefactos negros, duplicación visual y capas dañadas en Android/Chrome.
+   Mantiene el mismo diseño, pero elimina composiciones GPU costosas en móvil. */
+@media (max-width: 760px) {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    background: #f6f1ff !important;
+    overflow-x: hidden !important;
+  }
+
+  body {
+    background:
+      linear-gradient(180deg, #f5efff 0%, #fff8ed 100%) !important;
+  }
+
+  :root[data-theme="dark"] body {
+    background:
+      linear-gradient(180deg, #11091d 0%, #1c1130 100%) !important;
+  }
+
+  .app-shell,
+  .main-panel,
+  .content-area,
+  .page-stack,
+  .home-impact-v48 {
+    transform: none !important;
+    filter: none !important;
+    perspective: none !important;
+    will-change: auto !important;
+    contain: none !important;
+    isolation: auto !important;
+    backface-visibility: visible !important;
+    -webkit-backface-visibility: visible !important;
+  }
+
+  .home-impact-v48 *,
+  .mobile-nav *,
+  .prelaunch-global-fab *,
+  .global-loading-backdrop *,
+  .global-loading-box * {
+    transform: none !important;
+    filter: none !important;
+    will-change: auto !important;
+    backface-visibility: visible !important;
+    -webkit-backface-visibility: visible !important;
+  }
+
+  .home-impact-v48 .impact-ai-welcome-card,
+  .home-impact-v48 .home-impact-hero,
+  .home-impact-v48 .impact-action-card,
+  .home-impact-v48 .impact-metric-card,
+  .home-impact-v48 .impact-progress-card,
+  .home-impact-v48 .impact-links-panel,
+  .home-impact-v48 .impact-news-preview,
+  .home-impact-v48 .impact-news-card,
+  .mobile-nav,
+  .mobile-panel-card {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    filter: none !important;
+    transform: none !important;
+    box-shadow: none !important;
+    background-clip: padding-box !important;
+    overflow: hidden !important;
+  }
+
+  .home-impact-v48 .impact-ai-welcome-card,
+  .home-impact-v48 .home-impact-hero {
+    background: linear-gradient(135deg, #ffffff 0%, #f2eaff 100%) !important;
+    border-color: rgba(126,100,232,.16) !important;
+  }
+
+  :root[data-theme="dark"] .home-impact-v48 .impact-ai-welcome-card,
+  :root[data-theme="dark"] .home-impact-v48 .home-impact-hero {
+    background: linear-gradient(135deg, #2a1b43 0%, #1f1332 100%) !important;
+  }
+
+  .home-impact-v48 .impact-action-card,
+  .home-impact-v48 .impact-metric-card,
+  .home-impact-v48 .impact-links-panel,
+  .home-impact-v48 .impact-news-preview,
+  .home-impact-v48 .impact-news-card {
+    background: #ffffff !important;
+    border-color: rgba(126,100,232,.13) !important;
+  }
+
+  :root[data-theme="dark"] .home-impact-v48 .impact-action-card,
+  :root[data-theme="dark"] .home-impact-v48 .impact-metric-card,
+  :root[data-theme="dark"] .home-impact-v48 .impact-links-panel,
+  :root[data-theme="dark"] .home-impact-v48 .impact-news-preview,
+  :root[data-theme="dark"] .home-impact-v48 .impact-news-card {
+    background: #25163a !important;
+    border-color: rgba(255,255,255,.10) !important;
+  }
+
+  .home-impact-v48 .impact-coin-scene {
+    min-width: 112px !important;
+    width: 112px !important;
+    height: 112px !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: visible !important;
+  }
+
+  .home-impact-v48 .impact-coin-ring,
+  .home-impact-v48 .impact-usdt-coin,
+  .home-impact-v48 .impact-podium {
+    transform: none !important;
+    filter: none !important;
+    box-shadow: none !important;
+    animation: none !important;
+  }
+
+  .home-impact-v48 .impact-spark,
+  .home-impact-v48 .impact-watermark,
+  .home-impact-v48 .impact-line-art,
+  .prelaunch-global-fab::after {
+    display: none !important;
+    animation: none !important;
+  }
+
+  .home-impact-v48 img,
+  .brand-logo img,
+  .mobile-top-brand img,
+  .prelaunch-global-fab img {
+    filter: none !important;
+    transform: none !important;
+    animation: none !important;
+    image-rendering: auto;
+  }
+
+  .global-loading-backdrop.global-loading-mobile-safe {
+    inset: auto 12px calc(88px + env(safe-area-inset-bottom)) 12px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    z-index: 13000 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0 !important;
+    background: transparent !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    pointer-events: none !important;
+  }
+
+  .global-loading-backdrop.global-loading-mobile-safe .global-loading-box {
+    min-width: 0 !important;
+    max-width: calc(100vw - 44px) !important;
+    min-height: 38px !important;
+    padding: 9px 13px !important;
+    border-radius: 13px !important;
+    background: rgba(20, 15, 32, .92) !important;
+    color: #fff !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+  }
+
+  .global-loading-backdrop.global-loading-mobile-safe .global-loading-dot {
+    width: 11px !important;
+    height: 11px !important;
+    animation: none !important;
+    border: 2px solid rgba(255,255,255,.42) !important;
+    border-top-color: var(--gold-strong) !important;
+  }
+
+  .global-loading-backdrop.global-loading-mobile-safe .global-loading-box strong {
+    font-size: 13px !important;
+  }
+
+  .mobile-panel-backdrop,
+  .modal-backdrop,
+  .action-popup-backdrop,
+  .recharge-toast-backdrop,
+  .prelaunch-toast {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    filter: none !important;
+    background: rgba(22,16,36,.28) !important;
+  }
+
+  .prelaunch-global-fab {
+    width: 54px !important;
+    height: 54px !important;
+    right: 14px !important;
+    bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+    box-shadow: none !important;
+    animation: none !important;
+    transform: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: #fff8e8 !important;
+    border-color: rgba(215,183,122,.38) !important;
+  }
+
+  .prelaunch-global-fab strong {
+    display: none !important;
+  }
+
+  .prelaunch-global-fab span {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-nav {
+    background: #fff !important;
+    border: 1px solid rgba(126,100,232,.14) !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  :root[data-theme="dark"] .mobile-nav {
+    background: #24163a !important;
+  }
+
+  .mobile-nav a,
+  .mobile-nav button {
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .mobile-nav a.active,
+  .mobile-nav button.active {
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .impact-action-button:hover,
+  .mobile-nav a:hover,
+  .mobile-nav button:hover,
+  .prelaunch-global-fab:hover {
+    transform: none !important;
+  }
+}
+
+@media (max-width: 760px) and (max-device-memory: 4) {
+  .home-impact-v48 .impact-ai-welcome-card,
+  .home-impact-v48 .home-impact-hero,
+  .home-impact-v48 .impact-metric-card,
+  .home-impact-v48 .impact-links-panel {
+    border-radius: 20px !important;
+  }
+
+  .home-impact-v48 .impact-ai-welcome-card img {
+    max-width: 88px !important;
+  }
+
+  .home-impact-v48 .home-impact-hero {
+    min-height: 132px !important;
+  }
+
+  .home-impact-v48 .impact-metric-card {
+    min-height: 142px !important;
+  }
+}
+
+@media (max-width: 760px), (prefers-reduced-motion: reduce) {
+  .home-impact-v48 *,
+  .mobile-nav *,
+  .prelaunch-global-fab,
+  .global-loading-dot,
+  .prelaunch-global-fab::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

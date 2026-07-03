@@ -39,7 +39,7 @@ export default function GlobalLoading() {
 
   if (!visible) return null;
   return (
-    <div className="global-loading-backdrop" role="status" aria-live="polite">
+    <div className="global-loading-backdrop global-loading-mobile-safe" role="status" aria-live="polite">
       <div className="global-loading-box">
         <span className="global-loading-dot" />
         <strong>{message}</strong>
