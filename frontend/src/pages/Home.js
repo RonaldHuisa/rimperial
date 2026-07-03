@@ -2,23 +2,30 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   FiArrowRight,
-  FiBookOpen,
-  FiCpu,
-  FiCreditCard,
-  FiHeadphones,
   FiLock,
   FiMessageCircle,
-  FiRefreshCw,
-  FiShield,
-  FiTarget,
   FiTrendingUp,
   FiZap,
 } from "react-icons/fi";
 import api from "../services/api";
 import usdtIcon from "../assets/networks/usdt-bep20.png";
+import recargaIcon from "../assets/icons/royal/recarga.png";
+import retiroIcon from "../assets/icons/royal/retiro.png";
+import garantiaIcon from "../assets/icons/royal/garantia.png";
+import misionesIcon from "../assets/icons/royal/misiones.png";
+import rendimientoIcon from "../assets/icons/royal/rendimiento.png";
+import rachaIcon from "../assets/icons/royal/racha.png";
+import planesIcon from "../assets/icons/royal/planes.png";
+import historialIcon from "../assets/icons/royal/historial.png";
+import soporteIcon from "../assets/icons/royal/soporte.png";
 import { isRechargeLockedByPrelaunch, rechargePrelaunchMessage } from "../utils/prelaunchLock";
 
 const money = (value) => `${Number(value || 0).toFixed(2)} USDT`;
+
+
+function RoyalPanelIcon({ src, alt = "", className = "" }) {
+  return <img className={`royal-panel-icon ${className}`.trim()} src={src} alt={alt} aria-hidden={alt ? undefined : "true"} loading="lazy" />;
+}
 
 function imageUrl(src) {
   if (!src) return "";
@@ -104,8 +111,8 @@ export default function Home() {
         <section className="safe-welcome-card safe-welcome-ai-card">
           <div className="safe-welcome-copy">
             <span>Bienvenido ID {referralId}</span>
-            <h2>Entrena la IA financiera</h2>
-            <p>Completa tus tareas diarias y revisa tu progreso sin complicaciones.</p>
+            <h2>Entrena la IA financiera de Royal Imperial</h2>
+            <p>Completa tus tareas diarias, mejora tu precisión y revisa tu progreso.</p>
           </div>
           <img className="safe-welcome-brain" src="/ai-brain-banner.webp" alt="" aria-hidden="true" loading="eager" />
         </section>
@@ -120,35 +127,35 @@ export default function Home() {
 
         <section className="safe-action-grid" aria-label="Accesos principales">
           <button type="button" onClick={handleRechargeClick}>
-            <FiCreditCard />
+            <RoyalPanelIcon src={recargaIcon} />
             <span><strong>Recargar</strong><small>Disponible después del pre-lanzamiento</small></span>
           </button>
           <Link to="/withdraw">
-            <FiRefreshCw />
+            <RoyalPanelIcon src={retiroIcon} />
             <span><strong>Retirar</strong><small>Cobrar recompensa</small></span>
           </Link>
         </section>
 
         <section className="safe-metric-grid" aria-label="Resumen principal">
           <article>
-            <FiShield />
+            <RoyalPanelIcon src={garantiaIcon} />
             <span>Garantía activa</span>
             <strong>{guarantee.toFixed(2)} USDT</strong>
           </article>
           <article>
-            <FiCpu />
+            <RoyalPanelIcon src={misionesIcon} />
             <span>Misiones IA de hoy</span>
             <strong>{completed} / {taskLimit}</strong>
             <small>{remaining} pendiente{remaining === 1 ? "" : "s"}</small>
           </article>
           <article>
-            <FiTarget />
+            <RoyalPanelIcon src={rendimientoIcon} />
             <span>Rendimiento IA</span>
             <strong>{precision}%</strong>
             <small>Precisión semanal</small>
           </article>
           <article>
-            <FiZap />
+            <RoyalPanelIcon src={rachaIcon} />
             <span>Actividad diaria</span>
             <strong>{activityLabel}</strong>
             <small>{completed > 0 ? "Sigue completando tareas" : "Inicia tus tareas IA"}</small>
@@ -156,9 +163,9 @@ export default function Home() {
         </section>
 
         <section className="safe-links-panel" aria-label="Accesos secundarios">
-          <Link to="/levels"><FiTrendingUp /><span><strong>Planes</strong><small>Activa o mejora tu nivel</small></span><FiArrowRight /></Link>
-          <Link to="/history"><FiBookOpen /><span><strong>Movimientos</strong><small>Historial de cuenta</small></span><FiArrowRight /></Link>
-          <Link to="/support"><FiHeadphones /><span><strong>Centro de ayuda</strong><small>Soporte oficial</small></span><FiArrowRight /></Link>
+          <Link to="/levels"><RoyalPanelIcon src={planesIcon} /><span><strong>Planes</strong><small>Activa o mejora tu nivel</small></span><FiArrowRight /></Link>
+          <Link to="/history"><RoyalPanelIcon src={historialIcon} /><span><strong>Movimientos</strong><small>Historial de cuenta</small></span><FiArrowRight /></Link>
+          <Link to="/support"><RoyalPanelIcon src={soporteIcon} /><span><strong>Centro de ayuda</strong><small>Soporte oficial</small></span><FiArrowRight /></Link>
           <Link to="/prelaunch"><FiZap /><span><strong>Pre-lanzamiento</strong><small>Bono fundador activo</small></span><FiArrowRight /></Link>
         </section>
       </div>
@@ -178,8 +185,8 @@ export default function Home() {
       <section className="impact-ai-welcome-card">
         <div className="impact-ai-welcome-copy">
           <span>Bienvenido ID {referralId}</span>
-          <h2>Entrena la IA financiera</h2>
-          <p>Completa tus tareas diarias y contribuye al crecimiento de nuestra IA financiera.</p>
+          <h2>Entrena la IA financiera de Royal Imperial</h2>
+          <p>Completa tus tareas diarias, mejora tu precisión y revisa tu progreso.</p>
         </div>
         <img src="/ai-brain-banner.webp" alt="" aria-hidden="true" />
       </section>
@@ -208,7 +215,7 @@ export default function Home() {
 
       <section className="impact-action-grid" aria-label="Accesos principales">
         <button className="impact-action-card recharge impact-action-button" type="button" onClick={handleRechargeClick}>
-          <span className="impact-action-icon"><FiCreditCard /></span>
+          <span className="impact-action-icon"><RoyalPanelIcon src={recargaIcon} /></span>
           <div>
             <strong>Recargar</strong>
             <small>Disponible después del pre-lanzamiento</small>
@@ -217,7 +224,7 @@ export default function Home() {
         </button>
 
         <Link className="impact-action-card withdraw" to="/withdraw">
-          <span className="impact-action-icon"><FiRefreshCw /></span>
+          <span className="impact-action-icon"><RoyalPanelIcon src={retiroIcon} /></span>
           <div>
             <strong>Retirar</strong>
             <small>Cobrar recompensa</small>
@@ -228,7 +235,7 @@ export default function Home() {
 
       <section className="impact-metric-grid" aria-label="Resumen principal">
         <article className="impact-metric-card">
-          <span className="impact-metric-icon shield"><FiShield /></span>
+          <span className="impact-metric-icon shield"><RoyalPanelIcon src={garantiaIcon} /></span>
           <h3>Garantía activa</h3>
           <strong>{guarantee.toFixed(2)} USDT</strong>
           <small>Total disponible para niveles</small>
@@ -236,7 +243,7 @@ export default function Home() {
         </article>
 
         <article className="impact-metric-card">
-          <span className="impact-metric-icon tasks"><FiCpu /></span>
+          <span className="impact-metric-icon tasks"><RoyalPanelIcon src={misionesIcon} /></span>
           <h3>Misiones IA de hoy</h3>
           <strong>{completed} / {taskLimit}</strong>
           <small>{remaining} pendiente{remaining === 1 ? "" : "s"}</small>
@@ -244,7 +251,7 @@ export default function Home() {
         </article>
 
         <article className="impact-metric-card">
-          <span className="impact-metric-icon target"><FiTarget /></span>
+          <span className="impact-metric-icon target"><RoyalPanelIcon src={rendimientoIcon} /></span>
           <h3>Rendimiento IA</h3>
           <strong>{precision}%</strong>
           <small>Precisión semanal</small>
@@ -252,7 +259,7 @@ export default function Home() {
         </article>
 
         <article className="impact-metric-card">
-          <span className="impact-metric-icon activity"><FiZap /></span>
+          <span className="impact-metric-icon activity"><RoyalPanelIcon src={rachaIcon} /></span>
           <h3>Actividad diaria</h3>
           <strong>{activityLabel}</strong>
           <small>{completed > 0 ? "Sigue completando tareas" : "Inicia tus tareas IA"}</small>
@@ -262,7 +269,7 @@ export default function Home() {
 
       <section className="impact-links-panel" aria-label="Accesos secundarios">
         <Link to="/levels" className="impact-plan-link">
-          <span><FiTrendingUp /></span>
+          <span><RoyalPanelIcon src={planesIcon} /></span>
           <div>
             <strong>Planes</strong>
             <small>Activa o mejora tu nivel</small>
@@ -271,7 +278,7 @@ export default function Home() {
         </Link>
 
         <Link to="/history">
-          <span><FiBookOpen /></span>
+          <span><RoyalPanelIcon src={historialIcon} /></span>
           <div>
             <strong>Movimientos</strong>
             <small>Historial de recargas, retiros y tareas</small>
@@ -280,7 +287,7 @@ export default function Home() {
         </Link>
 
         <Link to="/support">
-          <span><FiHeadphones /></span>
+          <span><RoyalPanelIcon src={soporteIcon} /></span>
           <div>
             <strong>Centro de ayuda</strong>
             <small>Soporte oficial verificado</small>
