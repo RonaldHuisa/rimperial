@@ -4,6 +4,13 @@ import { FiActivity, FiBookOpen, FiCalendar, FiCreditCard, FiGrid, FiLogOut, FiM
 import BrandLogo from "./BrandLogo";
 import ThemeToggle from "./ThemeToggle";
 import { isRechargeLockedByPrelaunch, rechargePrelaunchMessage } from "../utils/prelaunchLock";
+import iconPlanes from "../assets/icons/royal/planes.png";
+import iconRecarga from "../assets/icons/royal/recarga.png";
+import iconRetiro from "../assets/icons/royal/retiro.png";
+import iconHistorial from "../assets/icons/royal/historial.png";
+import iconEquipo from "../assets/icons/royal/equipo.png";
+import iconWhatsapp from "../assets/icons/royal/whatsapp.png";
+import iconAdmin from "../assets/icons/royal/admin.png";
 
 const mainNavItems = [
   { to: "/home", label: "Inicio", icon: <FiGrid /> },
@@ -26,20 +33,20 @@ export default function AppShell({ children }) {
   const adminNavItem = useMemo(() => ({ to: "/admin", label: "Admin", icon: <FiSettings /> }), []);
   const navItems = useMemo(() => (user?.is_admin ? [...mainNavItems, adminNavItem] : mainNavItems), [user?.is_admin, adminNavItem]);
   const walletLinks = useMemo(() => [
-    { to: "/levels", label: "Comprar plan", icon: <FiTrendingUp />, note: "Activa o mejora tu nivel", tone: "buyplan" },
-    { to: "/recharge", label: "Recargar", icon: <FiCreditCard />, note: "Añadir garantía", tone: "recharge" },
-    { to: "/withdraw", label: "Retirar", icon: <FiRefreshCw />, note: "Cobrar recompensa", tone: "withdraw" },
-    { to: "/history", label: "Historial", icon: <FiBookOpen />, note: "Movimientos y recompensas", tone: "history" },
+    { to: "/levels", label: "Compra plan", iconImg: iconPlanes, note: "Activa o mejora tu nivel", tone: "buyplan" },
+    { to: "/recharge", label: "Recargar", iconImg: iconRecarga, note: "Añadir garantía", tone: "recharge" },
+    { to: "/withdraw", label: "Retirar", iconImg: iconRetiro, note: "Cobrar recompensa", tone: "withdraw" },
+    { to: "/history", label: "Historial", iconImg: iconHistorial, note: "Movimientos y recompensas", tone: "history" },
   ], []);
   const menuLinks = useMemo(() => {
     const items = [
-      { to: "/profile", label: "Perfil", icon: <FiUser />, note: "Cuenta y accesos", tone: "profile" },
-      { to: "/invite", label: "Equipo", icon: <FiUsers />, note: "Invitaciones y comunidad", tone: "team" },
-      { to: "/prelaunch", label: "Pre-lanzamiento", icon: <FiCalendar />, note: "Bono fundador", tone: "prelaunch" },
-      { to: "/support", label: "Soporte", icon: <FiMessageCircle />, note: "Canales oficiales", tone: "support" },
-      { to: "/news", label: "Noticias", icon: <FiBookOpen />, note: "Novedades y promociones", tone: "news" },
+      { to: "/profile", label: "Perfil", iconEmoji: "👤", note: "Cuenta y accesos", tone: "profile" },
+      { to: "/invite", label: "Equipo", iconImg: iconEquipo, note: "Invitaciones y comunidad", tone: "team" },
+      { to: "/prelaunch", label: "Pre-lanzamiento", iconImg: "/prelaunch-rocket.png", note: "Bono fundador", tone: "prelaunch" },
+      { to: "/support", label: "Soporte", iconImg: iconWhatsapp, note: "Canales oficiales", tone: "support" },
+      { to: "/news", label: "Noticias", iconEmoji: "📰", note: "Novedades y promociones", tone: "news" },
     ];
-    if (user?.is_admin) items.push({ to: "/admin", label: "Panel Admin", icon: <FiSettings />, note: "Gestión general", tone: "admin" });
+    if (user?.is_admin) items.push({ to: "/admin", label: "Panel Admin", iconImg: iconAdmin, note: "Gestión general", tone: "admin" });
     return items;
   }, [user?.is_admin]);
   const walletActive = ["/levels", "/recharge", "/withdraw", "/history", "/transactions"].some((path) => location.pathname.startsWith(path));
@@ -96,6 +103,16 @@ export default function AppShell({ children }) {
     }
     setMobilePanel(null);
     navigate("/recharge");
+  };
+
+  const renderMobilePanelIcon = (item) => {
+    if (item.iconImg) {
+      return <img src={item.iconImg} alt="" aria-hidden="true" />;
+    }
+    if (item.iconEmoji) {
+      return <span className="mobile-panel-emoji" aria-hidden="true">{item.iconEmoji}</span>;
+    }
+    return item.icon;
   };
 
 
@@ -204,7 +221,7 @@ export default function AppShell({ children }) {
                     className={`mobile-panel-link mobile-panel-button tone-${item.tone || "default"}`}
                     onClick={handleMobileRechargeClick}
                   >
-                    <span className="mobile-panel-link-icon">{item.icon}</span>
+                    <span className="mobile-panel-link-icon">{renderMobilePanelIcon(item)}</span>
                     <span><strong>{item.label}</strong><small>Disponible después del pre-lanzamiento</small></span>
                   </button>
                 ) : (
@@ -213,7 +230,7 @@ export default function AppShell({ children }) {
                     to={item.to}
                     className={({ isActive }) => `mobile-panel-link tone-${item.tone || "default"} ${isActive ? "active" : ""}`}
                   >
-                    <span className="mobile-panel-link-icon">{item.icon}</span>
+                    <span className="mobile-panel-link-icon">{renderMobilePanelIcon(item)}</span>
                     <span><strong>{item.label}</strong><small>{item.note}</small></span>
                   </NavLink>
                 )
