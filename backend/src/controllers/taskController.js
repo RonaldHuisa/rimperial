@@ -20,6 +20,13 @@ function isPeruWorkday(date = new Date()) {
   }).format(date);
   return !["Sat", "Sun"].includes(day);
 }
+
+// Royal Imperial AI:
+// - Pasantía / plan gratis (nivel 0): disponible de lunes a domingo.
+// - Planes R1+ (niveles pagados): disponibles de lunes a viernes.
+function isTaskDayAllowed(activeLevel, date = new Date()) {
+  return Number(activeLevel || 0) === 0 || isPeruWorkday(date);
+}
 function diffCalendarDays(start, end = new Date()) {
   const startDate = getPeruDateString(new Date(start));
   const endDate = getPeruDateString(end);
@@ -132,8 +139,9 @@ async function getTasksDashboard(req, res) {
     const activeLevel = await getActiveLevel(client, userId);
     const rawCfg = await getRuntimeLevelConfig(client, activeLevel);
     const workday = isPeruWorkday();
+    const taskDayAllowed = isTaskDayAllowed(activeLevel);
     const trialActive = activeLevel > 0 ? true : isTrialActive(userResult.rows[0]);
-    const cfg = rawCfg && workday && trialActive ? rawCfg : rawCfg;
+    const cfg = rawCfg;
 
     const todayResult = await client.query(
       `SELECT COUNT(*)::int AS completed, COALESCE(SUM(reward_usdt),0) AS reward FROM ai_task_responses WHERE user_id=$1 AND ${todayWindowSql()}`,
@@ -141,7 +149,7 @@ async function getTasksDashboard(req, res) {
     );
     const completed = Number(todayResult.rows[0]?.completed || 0);
     const rewardToday = todayResult.rows[0]?.reward || "0";
-    const limit = cfg && workday && trialActive ? cfg.dailyTasks : 0;
+    const limit = cfg && taskDayAllowed && trialActive ? cfg.dailyTasks : 0;
     const remaining = Math.max(0, limit - completed);
 
     const last = await getLastResponse(client, userId);
@@ -169,9 +177,10 @@ async function getTasksDashboard(req, res) {
       activeLevel,
       levelConfig: cfg ? { ...cfg, cooldownLabel: getCooldownLabel(cfg.cooldownSeconds) } : null,
       workday,
+      taskDayAllowed,
       trialActive,
-      workRestrictionMessage: !workday
-        ? "Las tareas IA están disponibles de lunes a viernes."
+      workRestrictionMessage: !taskDayAllowed
+        ? "Las tareas IA de planes R1 en adelante están disponibles de lunes a viernes. La pasantía sí está activa de lunes a domingo."
         : (!trialActive ? "Tu pasantía de 5 días finalizó. Compra un plan para continuar." : null),
       today: { completed, limit, remaining, rewardUsdt: rewardToday, nextResetAt },
       accuracy,
@@ -206,11 +215,6 @@ async function completeVipTask(req, res) {
     await client.query("BEGIN");
     await seedRoyalVipPackages(client);
 
-    if (!isPeruWorkday()) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ message: "Las tareas IA están disponibles de lunes a viernes." });
-    }
-
     const userResult = await client.query(`SELECT id,created_at FROM users WHERE id=$1 LIMIT 1`, [userId]);
     if (!userResult.rows.length) {
       await client.query("ROLLBACK");
@@ -218,6 +222,11 @@ async function completeVipTask(req, res) {
     }
 
     const activeLevel = await getActiveLevel(client, userId);
+    if (!isTaskDayAllowed(activeLevel)) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Las tareas IA de planes R1 en adelante están disponibles de lunes a viernes. La pasantía sí está activa de lunes a domingo." });
+    }
+
     if (activeLevel === 0 && !isTrialActive(userResult.rows[0])) {
       await client.query("ROLLBACK");
       return res.status(400).json({ message: "Tu pasantía de 5 días finalizó. Compra un plan para continuar." });

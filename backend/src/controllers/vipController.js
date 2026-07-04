@@ -108,6 +108,7 @@ async function getVipStatus(req, res) {
         referralIndirectPercent: 2,
         cancellationFeePercent: CANCELLATION_FEE_PERCENT,
         workdays: "lunes a viernes",
+        trialWorkdays: "lunes a domingo",
         recoveryWorkdays: 25,
         vipValidDays: 120,
         trialValidDays: 5,

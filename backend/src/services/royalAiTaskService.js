@@ -1,6 +1,7 @@
 const LEVEL_CONFIG = {
   // Modelo v1.0.79:
-  // - Trabajo: lunes a viernes.
+  // - Pasantía / plan gratis: lunes a domingo.
+  // - Planes VIP/R1+: lunes a viernes.
   // - Recuperación estimada VIP: 25 días laborales.
   // - Duración VIP: 120 días calendario.
   // - Pasantía: 5 días, 6 tareas, 0.40 USDT diario.
