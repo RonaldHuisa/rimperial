@@ -21,6 +21,7 @@ import perfilIcon from "../assets/icons/royal/perfil.png";
 import retiroIcon from "../assets/icons/royal/retiro.png";
 import cuentasRegistradasIcon from "../assets/icons/royal/cuentas-registrada.png";
 import passwordIcon from "../assets/icons/royal/password.png";
+import dolarIcon from "../assets/icons/royal/dolar.png";
 
 
 const COUNTRIES = [
@@ -94,6 +95,15 @@ function describeArc(cx, cy, outerRadius, innerRadius, startAngle, endAngle) {
     "A", innerRadius, innerRadius, 0, largeArc, 1, innerEnd.x, innerEnd.y,
     "Z",
   ].join(" ");
+}
+
+
+function redeemBalanceTypeLabel(value) {
+  const key = String(value || '').trim().toLowerCase();
+  if (key === 'recharge') return 'Saldo de garantía';
+  if (key === 'withdrawable') return 'Saldo retirable';
+  if (key === 'credit') return 'Saldo de crédito';
+  return 'Saldo';
 }
 
 function SectionHeader({ title, subtitle, onBack }) {
@@ -288,6 +298,7 @@ export default function Profile() {
   const activePlanPackage = (vipData?.packages || []).find((item) => Number(item.level) === Number(activePurchase?.level));
   const planName = activePurchase ? `Plan ${activePlanPackage?.name || activePurchase.level}` : "Pasantía";
   const creditPoints = Number(p.creditPoints ?? p.credit_points ?? 50);
+  const redeemHistory = profileBundle?.redeemHistory || [];
 
   const renderMain = () => (
     <>
@@ -436,7 +447,7 @@ export default function Profile() {
       <SectionHeader title="Canjear código" subtitle="Ingresa tu código para aplicar un beneficio disponible." onBack={() => goSection("main")} />
       <section className="profile-redeem-panel profile-redeem-section">
         <div className="profile-redeem-head">
-          <FiGift />
+          <RoyalIcon src={regaloIcon} alt="Código" />
           <div>
             <span className="eyebrow">Código</span>
             <h3>Aplicar beneficio</h3>
@@ -451,6 +462,34 @@ export default function Profile() {
           />
           <button className="primary-btn" disabled={redeeming}>{redeeming ? "Validando..." : "Canjear"}</button>
         </form>
+      </section>
+
+      <section className="panel-card profile-section-card redeem-history-panel">
+        <div className="section-title">
+          <span>Historial</span>
+          <h3>Bonos canjeados</h3>
+        </div>
+        {redeemHistory.length === 0 ? (
+          <div className="empty-soft">Aún no has canjeado bonos.</div>
+        ) : (
+          <div className="redeem-history-list">
+            {redeemHistory.map((item) => (
+              <article className="redeem-history-item" key={item.id}>
+                <div className="redeem-history-icon">
+                  <img src={dolarIcon} alt="Bono" />
+                </div>
+                <div className="redeem-history-copy">
+                  <strong>{item.code}</strong>
+                  <small>{redeemBalanceTypeLabel(item.balanceType)} · {new Date(item.createdAt).toLocaleDateString("es-PE")}</small>
+                </div>
+                <div className="redeem-history-amount">
+                  <strong>+{Number(item.amountUsdt || 0).toFixed(2)} USDT</strong>
+                  <span>Reclamado</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </>
   );
