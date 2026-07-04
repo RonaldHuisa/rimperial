@@ -1,7 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FiAward, FiCheckCircle, FiClock, FiDollarSign, FiRefreshCw, FiTarget, FiZap } from "react-icons/fi";
 import api from "../services/api";
 import MiniChart from "../components/MiniChart";
+import planesIcon from "../assets/icons/royal/planes.png";
+import relojIcon from "../assets/icons/royal/reloj.png";
+import rendimientoIcon from "../assets/icons/royal/rendimiento.png";
+import misionesIcon from "../assets/icons/royal/misiones.png";
+import monedasIcon from "../assets/icons/royal/monedas.png";
+import dolarIcon from "../assets/icons/royal/dolar.png";
+import tareaCompletaIcon from "../assets/icons/royal/tarea-completa.png";
 
 const money = (value) => `${Number(value || 0).toFixed(3)} USDT`;
 
@@ -106,7 +112,7 @@ export default function Tasks() {
       {toast && (
         <div className="task-toast-backdrop" role="status" aria-live="polite">
           <div className="task-toast-box">
-            <FiCheckCircle />
+            <img className="task-toast-icon" src={tareaCompletaIcon} alt="" aria-hidden="true" />
             <strong>{remainingToday <= 0 ? "Tareas completadas" : toast}</strong>
           </div>
         </div>
@@ -120,12 +126,13 @@ export default function Tasks() {
         </div>
         <img className="tasks-impact-hero-brain" src="/ai-brain-banner.webp" alt="" aria-hidden="true" />
         <div className="tasks-v2-plan">
+          <img className="task-info-icon" src={planesIcon} alt="" aria-hidden="true" />
           <span>Plan actual</span>
           <strong>Nivel {levelNumber} · {levelName}</strong>
           <small>{dailyLimit} tareas disponibles</small>
         </div>
         <div className="reset-chip">
-          <FiClock />
+          <img className="task-info-icon" src={relojIcon} alt="" aria-hidden="true" />
           <span>Reset de preguntas en</span>
           <strong>{formatSeconds(resetSeconds)}</strong>
         </div>
@@ -143,7 +150,7 @@ export default function Tasks() {
             </div>
           ) : (dashboard?.today?.remaining || 0) <= 0 ? (
             <div className="task-complete-mini">
-              <FiCheckCircle />
+              <img src={tareaCompletaIcon} alt="" aria-hidden="true" />
               <div>
                 <h3>Tareas completadas</h3>
                 <p>Tu avance de hoy quedó registrado.</p>
@@ -151,7 +158,7 @@ export default function Tasks() {
             </div>
           ) : remainingSeconds > 0 ? (
             <div className="validation-state task-wait-state">
-              <FiClock />
+              <img className="task-state-icon" src={relojIcon} alt="" aria-hidden="true" />
               <h3>Preparando siguiente tarea</h3>
               <p>Actualizando tu progreso y dejando lista la próxima validación.</p>
               <strong>{formatSeconds(remainingSeconds)}</strong>
@@ -182,31 +189,31 @@ export default function Tasks() {
               </button>
             </>
           ) : (
-            <div className="empty-state"><FiRefreshCw /><h3>Cargando tarea</h3><button className="secondary-btn" onClick={load}>Actualizar</button></div>
+            <div className="empty-state"><img className="task-state-icon" src={relojIcon} alt="" aria-hidden="true" /><h3>Cargando tarea</h3><button className="secondary-btn" onClick={load}>Actualizar</button></div>
           )}
         </article>
 
         <aside className="task-side task-side-v2">
           <div className="panel-card compact-panel task-stat-card">
-            <FiTarget />
+            <img className="task-card-icon" src={rendimientoIcon} alt="" aria-hidden="true" />
             <span>Precisión semanal</span>
             <strong>{accuracy}%</strong>
             <small>{dashboard?.accuracy?.status || "Sin datos"}</small>
           </div>
           <div className="panel-card compact-panel task-stat-card">
-            <FiZap />
+            <img className="task-card-icon" src={misionesIcon} alt="" aria-hidden="true" />
             <span>Tareas de hoy</span>
             <strong>{completedToday}/{dailyLimit}</strong>
             <small>{remainingToday} pendientes</small>
           </div>
           <div className="panel-card compact-panel task-stat-card">
-            <FiAward />
+            <img className="task-card-icon" src={monedasIcon} alt="" aria-hidden="true" />
             <span>Por pregunta</span>
             <strong>{money(rewardPerQuestion)}</strong>
             <small>Al responder.</small>
           </div>
           <div className="panel-card compact-panel task-stat-card">
-            <FiDollarSign />
+            <img className="task-card-icon" src={dolarIcon} alt="" aria-hidden="true" />
             <span>Potencial diario</span>
             <strong>{money(dailyPotential)}</strong>
             <small>Hoy: {money(earnedToday)}</small>

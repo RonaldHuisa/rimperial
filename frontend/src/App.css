@@ -16388,3 +16388,186 @@ b,
   bottom: 104px !important;
   display: grid !important;
 }
+
+/* v1.0.93 — Tareas IA optimizadas: sin degradados y con iconos PNG oficiales */
+.tasks-page-v2,
+.tasks-page-v2 * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tasks-impact-hero,
+:root[data-theme="dark"] .tasks-impact-hero,
+.app-shell.admin-mobile-preview .tasks-impact-hero {
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: none !important;
+}
+
+.tasks-impact-hero::after,
+.app-shell.admin-mobile-preview .tasks-impact-hero::after {
+  display: none !important;
+}
+
+.tasks-v2-plan,
+.reset-chip,
+:root[data-theme="dark"] .tasks-v2-plan,
+:root[data-theme="dark"] .reset-chip,
+.app-shell.admin-mobile-preview .tasks-v2-plan,
+.app-shell.admin-mobile-preview .reset-chip {
+  background: var(--surface-solid) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: none !important;
+}
+
+.task-current-card,
+:root[data-theme="dark"] .task-current-card,
+.app-shell.admin-mobile-preview .task-current-card {
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: none !important;
+}
+
+.task-question-head > strong,
+.answer-grid-v2 button.selected,
+.task-question-box,
+:root[data-theme="dark"] .task-question-box,
+.task-wait-state,
+.validation-state,
+:root[data-theme="dark"] .task-wait-state,
+:root[data-theme="dark"] .validation-state,
+.task-complete-mini,
+.app-shell.admin-mobile-preview .task-wait-state,
+.app-shell.admin-mobile-preview .validation-state {
+  background: var(--surface-solid) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: none !important;
+}
+
+.answer-grid-v2 button,
+:root[data-theme="dark"] .answer-grid-v2 button {
+  background: var(--surface-solid) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: none !important;
+}
+
+.answer-grid-v2 button.selected {
+  border-color: var(--brand) !important;
+}
+
+.task-current-card .primary-btn.full {
+  background: var(--brand) !important;
+  box-shadow: none !important;
+}
+
+.task-stat-card,
+.app-shell.admin-mobile-preview .task-stat-card {
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+.task-history-card,
+.history-list-compact-v2 div {
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: none !important;
+}
+
+.task-info-icon,
+.task-card-icon,
+.task-state-icon,
+.task-toast-icon,
+.task-complete-mini > img {
+  display: block;
+  object-fit: contain;
+  flex: 0 0 auto;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.task-info-icon {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 3px;
+}
+
+.task-card-icon {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 8px;
+}
+
+.task-state-icon {
+  width: 58px;
+  height: 58px;
+}
+
+.task-toast-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.task-complete-mini > img {
+  width: 42px;
+  height: 42px;
+}
+
+.task-stat-card span,
+.tasks-v2-plan span,
+.reset-chip span {
+  color: var(--muted) !important;
+}
+
+.tasks-v2-plan strong,
+.reset-chip strong,
+.task-stat-card strong {
+  color: var(--text) !important;
+}
+
+.reset-chip strong {
+  color: var(--gold-strong) !important;
+}
+
+@media (max-width: 760px) {
+  .tasks-impact-hero,
+  .app-shell.admin-mobile-preview .tasks-impact-hero {
+    padding: 13px !important;
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .tasks-impact-hero-brain,
+  .app-shell.admin-mobile-preview .tasks-impact-hero-brain {
+    width: 64px !important;
+    height: 64px !important;
+    right: 14px !important;
+    top: 39px !important;
+    opacity: .92 !important;
+    filter: none !important;
+  }
+
+  .tasks-v2-title,
+  .app-shell.admin-mobile-preview .tasks-v2-title {
+    padding-right: 72px !important;
+  }
+
+  .task-info-icon,
+  .app-shell.admin-mobile-preview .task-info-icon {
+    width: 24px !important;
+    height: 24px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .task-card-icon,
+  .app-shell.admin-mobile-preview .task-card-icon {
+    width: 38px !important;
+    height: 38px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .task-complete-mini > img {
+    width: 38px !important;
+    height: 38px !important;
+  }
+}
