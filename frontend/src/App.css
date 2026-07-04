@@ -16268,3 +16268,123 @@ b,
   padding: 0;
   object-fit: contain;
 }
+
+/* v1.0.94 — Inicio móvil: noticias visibles, cohete flotante y iconos libres */
+@media (max-width: 760px) {
+  /* El cohete flotante vuelve a mostrarse también en la versión móvil ligera. */
+  .prelaunch-global-fab {
+    display: grid !important;
+    right: 14px !important;
+    bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+    width: 56px !important;
+    min-width: 56px !important;
+    height: 56px !important;
+    padding: 0 !important;
+    border-radius: 999px !important;
+    z-index: 120 !important;
+    background: rgba(36, 19, 54, .96) !important;
+    border: 1px solid rgba(215, 183, 122, .45) !important;
+    box-shadow: 0 10px 22px rgba(18, 9, 31, .22) !important;
+    place-items: center !important;
+  }
+
+  .prelaunch-global-fab img {
+    width: 42px !important;
+    height: 42px !important;
+    object-fit: contain !important;
+  }
+
+  .prelaunch-global-fab > strong {
+    display: none !important;
+  }
+
+  .prelaunch-global-fab span {
+    right: -5px !important;
+    top: -5px !important;
+    min-width: 24px !important;
+    height: 22px !important;
+    font-size: 10px !important;
+  }
+
+  /* Iconos PNG libres: sin cajita, más grandes y con más vitalidad. */
+  .safe-action-grid .royal-panel-icon,
+  .safe-metric-grid article > .royal-panel-icon,
+  .safe-links-panel a > .royal-panel-icon,
+  .safe-links-panel a > .safe-rocket-row-icon {
+    width: 46px !important;
+    height: 46px !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    object-fit: contain !important;
+  }
+
+  .safe-action-grid .royal-panel-icon {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .safe-metric-grid article > .royal-panel-icon {
+    width: 48px !important;
+    height: 48px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .safe-links-panel a > .royal-panel-icon,
+  .safe-links-panel a > .safe-rocket-row-icon,
+  .safe-free-emoji {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .safe-free-emoji {
+    display: grid;
+    place-items: center;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-size: 30px;
+    line-height: 1;
+  }
+
+  .safe-action-grid button,
+  .safe-action-grid a {
+    grid-template-columns: 54px minmax(0, 1fr) !important;
+  }
+
+  .safe-links-panel a {
+    grid-template-columns: 46px minmax(0, 1fr) 18px !important;
+  }
+
+  .safe-links-panel small {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .safe-metric-grid article {
+    min-height: 138px !important;
+  }
+
+  .safe-action-grid svg,
+  .safe-metric-grid article > svg,
+  .safe-links-panel a > svg:first-child {
+    background: transparent !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  :root[data-theme="dark"] .safe-action-grid .royal-panel-icon,
+  :root[data-theme="dark"] .safe-metric-grid article > .royal-panel-icon,
+  :root[data-theme="dark"] .safe-links-panel a > .royal-panel-icon,
+  :root[data-theme="dark"] .safe-free-emoji {
+    background: transparent !important;
+  }
+}
+
+.app-shell.admin-mobile-preview .prelaunch-global-fab {
+  right: calc((100vw - 393px) / 2 + 16px) !important;
+  bottom: 104px !important;
+  display: grid !important;
+}
