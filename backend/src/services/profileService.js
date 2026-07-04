@@ -21,6 +21,25 @@ function isProfileComplete(user) {
   );
 }
 
+
+function mapRedeemHistory(row) {
+  return {
+    id: row.id,
+    code: row.code || '',
+    balanceType: row.balance_type || '',
+    amountUsdt: Number(row.amount_usdt || 0),
+    createdAt: row.created_at,
+  };
+}
+
+function mapBalanceTypeLabel(value) {
+  const key = String(value || '').trim().toLowerCase();
+  if (key === 'recharge') return 'Saldo de garantía';
+  if (key === 'withdrawable') return 'Saldo retirable';
+  if (key === 'credit') return 'Saldo de crédito';
+  return 'Saldo';
+}
+
 function mapWithdrawalAccount(row) {
   return {
     id: row.id,
@@ -34,7 +53,7 @@ function mapWithdrawalAccount(row) {
 }
 
 async function getUserProfileBundle(userId, client = pool) {
-  const [userResult, accountsResult] = await Promise.all([
+  const [userResult, accountsResult, redeemHistoryResult] = await Promise.all([
     client.query(
       `
       SELECT
@@ -66,10 +85,22 @@ async function getUserProfileBundle(userId, client = pool) {
       `,
       [userId]
     ),
+    client.query(
+      `
+      SELECT r.id, r.amount_usdt, r.balance_type, r.created_at, c.code
+      FROM redeem_code_redemptions r
+      JOIN redeem_codes c ON c.id = r.code_id
+      WHERE r.user_id = $1
+      ORDER BY r.created_at DESC, r.id DESC
+      LIMIT 12
+      `,
+      [userId]
+    ),
   ]);
 
   const user = userResult.rows[0] || null;
   const withdrawalAccounts = accountsResult.rows.map(mapWithdrawalAccount);
+  const redeemHistory = redeemHistoryResult.rows.map(mapRedeemHistory);
 
   return {
     profile: user ? {
@@ -89,6 +120,11 @@ async function getUserProfileBundle(userId, client = pool) {
       personalDataComplete: isProfileComplete(user),
     } : null,
     withdrawalAccounts,
+    redeemHistory,
+    redeemHistorySummary: {
+      total: redeemHistory.length,
+      lastCode: redeemHistory[0]?.code || '',
+    },
     hasWithdrawalAccount: withdrawalAccounts.length > 0,
     withdrawalReady: Boolean(user && isProfileComplete(user) && user.withdraw_enabled && withdrawalAccounts.length > 0),
   };
@@ -117,4 +153,6 @@ module.exports = {
   getUserProfileBundle,
   validateWithdrawalAccountPayload,
   mapWithdrawalAccount,
+  mapRedeemHistory,
+  mapBalanceTypeLabel,
 };

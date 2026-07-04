@@ -703,7 +703,7 @@ async function redeemCode(req, res) {
 
         if (Number(code.used_count || 0) >= Number(code.max_uses || 1)) {
             await client.query("ROLLBACK");
-            return res.status(400).json({ message: "Código sin usos disponibles." });
+            return res.status(400).json({ message: "Código ya no tiene usos disponibles." });
         }
 
         const existing = await client.query(
