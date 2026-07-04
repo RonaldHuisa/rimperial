@@ -14,6 +14,14 @@ import {
   FiZap,
 } from "react-icons/fi";
 import api from "../services/api";
+import regaloIcon from "../assets/icons/royal/regalo.png";
+import ruletaIcon from "../assets/icons/royal/ruleta.png";
+import whatsappIcon from "../assets/icons/royal/whatsapp.png";
+import perfilIcon from "../assets/icons/royal/perfil.png";
+import retiroIcon from "../assets/icons/royal/retiro.png";
+import cuentasRegistradasIcon from "../assets/icons/royal/cuentas-registrada.png";
+import passwordIcon from "../assets/icons/royal/password.png";
+
 
 const COUNTRIES = [
   { iso: "AR", name: "Argentina", code: "+54", emoji: "🇦🇷" },
@@ -60,6 +68,9 @@ function compactDate(value) {
   }
 }
 
+function RoyalIcon({ src, alt }) {
+  return <img className="profile-menu-icon-img" src={src} alt={alt || ""} aria-hidden="true" />;
+}
 
 function polarToCartesian(cx, cy, radius, angleDeg) {
   const angleRad = ((angleDeg - 90) * Math.PI) / 180;
@@ -293,7 +304,7 @@ export default function Profile() {
           <article><span>ID</span><strong>{referralCode}</strong></article>
           <article><span>Registro</span><strong>{compactDate(createdAt)}</strong></article>
           <article><span>Plan actual</span><strong>{planName}</strong></article>
-          <article className="profile-credit-box"><span>Puntos</span><strong>{creditPoints}</strong></article>
+          <article className="profile-credit-box"><span>Puntos de crédito</span><strong>{creditPoints}</strong></article>
         </div>
       </section>
 
@@ -301,25 +312,25 @@ export default function Profile() {
         <div className="section-title"><span>Accesos</span><h3>Gestiona tu cuenta</h3></div>
         <div className="profile-menu-list">
           <button className="profile-menu-item redeem-menu-item" type="button" onClick={() => goSection("redeem")}>
-            <FiGift /><div><strong>Canjear código</strong><small>Aplicar beneficio</small></div><FiChevronRight />
+            <RoyalIcon src={regaloIcon} alt="Canjear código" /><div><strong>Canjear código</strong><small>Aplicar beneficio</small></div><FiChevronRight />
           </button>
           <button className="profile-menu-item roulette-menu-item" type="button" onClick={() => goSection("roulette")}>
-            <FiZap /><div><strong>Ruleta</strong><small>Giros y premios</small></div><FiChevronRight />
+            <RoyalIcon src={ruletaIcon} alt="Ruleta" /><div><strong>Ruleta</strong><small>Giros y premios</small></div><FiChevronRight />
           </button>
           <Link className="profile-menu-item" to="/support">
-            <FiMessageCircle /><div><strong>Soporte</strong><small>Canales oficiales</small></div><FiChevronRight />
+            <RoyalIcon src={whatsappIcon} alt="Soporte" /><div><strong>Soporte</strong><small>Canales oficiales</small></div><FiChevronRight />
           </Link>
           <button className="profile-menu-item" type="button" onClick={() => goSection("personal")}>
-            <FiUser /><div><strong>Datos personales</strong><small>Nombre, país y celular</small></div><FiChevronRight />
+            <RoyalIcon src={perfilIcon} alt="Datos personales" /><div><strong>Datos personales</strong><small>Nombre, país y celular</small></div><FiChevronRight />
           </button>
           <button className="profile-menu-item" type="button" onClick={() => goSection("withdrawal")}>
-            <FiCreditCard /><div><strong>Cuentas de retiro</strong><small>Registrar método USDT</small></div><FiChevronRight />
+            <RoyalIcon src={retiroIcon} alt="Cuentas de retiro" /><div><strong>Cuentas de retiro</strong><small>Registrar método USDT</small></div><FiChevronRight />
           </button>
           <button className="profile-menu-item" type="button" onClick={() => goSection("accounts")}>
-            <FiBookOpen /><div><strong>Cuentas registradas</strong><small>Ver o eliminar cuentas</small></div><FiChevronRight />
+            <RoyalIcon src={cuentasRegistradasIcon} alt="Cuentas registradas" /><div><strong>Cuentas registradas</strong><small>Ver o eliminar cuentas</small></div><FiChevronRight />
           </button>
           <button className="profile-menu-item" type="button" onClick={() => goSection("security")}>
-            <FiKey /><div><strong>Cambiar contraseña</strong><small>Seguridad de acceso</small></div><FiChevronRight />
+            <RoyalIcon src={passwordIcon} alt="Cambiar contraseña" /><div><strong>Cambiar contraseña</strong><small>Seguridad de acceso</small></div><FiChevronRight />
           </button>
         </div>
       </section>

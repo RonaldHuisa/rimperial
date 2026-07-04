@@ -16747,3 +16747,92 @@ b,
   width: 40px !important;
   height: 40px !important;
 }
+
+/* v1.0.47-profile-clean — Perfil optimizado sin gradientes pesados */
+.profile-overview-card,
+.profile-menu-panel,
+.profile-section-card,
+.profile-redeem-panel {
+  background: var(--surface-solid) !important;
+  box-shadow: none !important;
+}
+.profile-info-grid article,
+.profile-info-grid-no-email article {
+  background: var(--surface-solid) !important;
+  box-shadow: none !important;
+}
+.profile-info-grid-no-email .profile-credit-box {
+  border-color: rgba(215, 183, 122, .46) !important;
+  background: rgba(215, 183, 122, .08) !important;
+}
+.profile-info-grid-no-email .profile-credit-box span {
+  color: var(--gold-strong) !important;
+}
+.profile-info-grid-no-email .profile-credit-box strong {
+  color: var(--gold-strong) !important;
+}
+.profile-menu-item {
+  background: var(--surface-solid) !important;
+  box-shadow: none !important;
+  min-height: 60px;
+}
+.profile-menu-item.redeem-menu-item {
+  border-color: rgba(215, 183, 122, .52) !important;
+  background: rgba(215, 183, 122, .08) !important;
+}
+.profile-menu-item.roulette-menu-item {
+  border-color: rgba(126, 100, 232, .38) !important;
+  background: rgba(126, 100, 232, .08) !important;
+}
+.profile-menu-icon-img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  display: block;
+  flex: 0 0 auto;
+}
+.profile-menu-item > svg:first-child:not(:last-child) {
+  background: transparent !important;
+  padding: 0 !important;
+}
+.profile-menu-item > svg:last-child {
+  width: 18px;
+  height: 18px;
+  color: var(--muted) !important;
+}
+.profile-menu-item.redeem-menu-item > svg:first-child,
+.profile-menu-item.roulette-menu-item > svg:first-child {
+  background: transparent !important;
+}
+.profile-menu-item:hover {
+  transform: none !important;
+  border-color: rgba(126, 100, 232, .36) !important;
+}
+.profile-menu-item.redeem-menu-item:hover {
+  border-color: rgba(215, 183, 122, .60) !important;
+}
+.profile-menu-item.roulette-menu-item:hover {
+  border-color: rgba(126, 100, 232, .48) !important;
+}
+.profile-redeem-panel {
+  border-color: var(--line) !important;
+}
+.profile-redeem-head > svg {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .profile-menu-icon-img {
+    width: 39px;
+    height: 39px;
+  }
+  .profile-menu-item {
+    min-height: 58px;
+  }
+}
+
+.app-shell.admin-mobile-preview .profile-menu-icon-img {
+  width: 39px;
+  height: 39px;
+}
