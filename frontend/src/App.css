@@ -16778,3 +16778,28 @@ b,
   background-image: none !important;
   box-shadow: none !important;
 }
+
+/* v1.0.51 — Noticias con saltos de línea visibles */
+.article-hero p,
+.article-content p,
+.article-content blockquote,
+.article-content figcaption,
+.compact-article-hero p,
+.compact-article-content p,
+.compact-article-content blockquote,
+.compact-article-content figcaption {
+  white-space: pre-line !important;
+}
+
+.news-card p,
+.compact-news-card p,
+.latest-news-link p,
+.latest-news-compact-link small,
+.impact-news-card small {
+  white-space: pre-line;
+}
+
+.article-section-form textarea,
+.article-editor-grid textarea {
+  white-space: pre-wrap;
+}
