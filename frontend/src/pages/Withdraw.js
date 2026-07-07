@@ -153,6 +153,17 @@ export default function Withdraw() {
         </section>
       )}
 
+      {status?.withdrawRequirementMessage && !status?.canWithdraw && !needsProfile && !needsValidation && (
+        <section className="withdraw-required-v26 needs-attention-v26">
+          <FiAlertCircle />
+          <div>
+            <span className="eyebrow">Horario de retiro</span>
+            <h3>{status?.withdrawalDayPolicy?.activeVipName || "Plan activo"}</h3>
+            <p>{status.withdrawRequirementMessage}</p>
+          </div>
+        </section>
+      )}
+
       <section className="withdraw-card-v26">
         <form className="withdraw-form-v26" onSubmit={submit}>
           <div className="withdraw-section-head-v26">
@@ -215,6 +226,8 @@ export default function Withdraw() {
         <span className="eyebrow">Política</span>
         <h3>Reglas de retiro</h3>
         <ul>
+          <li>Horario de retiro: 9:00 a. m. a 6:00 p. m. GMT-5.</li>
+          <li>R1-R2 lunes · R3-R4 martes · R5-R6 miércoles · R7-R8 jueves.</li>
           <li>Comisión de retiro 10%.</li>
           <li>Para tu primer retiro contacta con tu gerente.</li>
           <li>No tomamos responsabilidad por envíos a una dirección errónea.</li>

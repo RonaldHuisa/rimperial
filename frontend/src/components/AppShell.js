@@ -52,13 +52,8 @@ export default function AppShell({ children }) {
   const walletActive = ["/levels", "/recharge", "/withdraw", "/history", "/transactions"].some((path) => location.pathname.startsWith(path));
   const menuActive = ["/invite", "/profile", "/admin", "/support", "/news", "/prelaunch"].some((path) => location.pathname.startsWith(path));
   const prelaunchButtonVisible = useMemo(() => {
-    const peruDate = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Lima",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date());
-    return peruDate <= "2026-07-07";
+    // Visible solo antes del lanzamiento oficial UTC.
+    return new Date().toISOString().slice(0, 10) < "2026-07-07";
   }, []);
 
   useEffect(() => {

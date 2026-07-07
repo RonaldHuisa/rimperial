@@ -12,9 +12,12 @@ export function getPeruDateString(date = new Date()) {
 }
 
 export function isRechargeLockedByPrelaunch(date = new Date()) {
-  return getPeruDateString(date) <= PRELAUNCH_RECHARGE_CUTOFF;
+  // Lanzamiento habilitado desde el 7 de julio UTC.
+  // Desde esta fecha las recargas, compra de planes y retiros ya no quedan bloqueados por pre-lanzamiento.
+  const utcDate = date.toISOString().slice(0, 10);
+  return utcDate < PRELAUNCH_RECHARGE_CUTOFF;
 }
 
 export function rechargePrelaunchMessage() {
-  return "Las recargas estarán disponibles después del pre-lanzamiento. Hasta el 7 de julio solo están activas las tareas de pasantía y bonos fundadores.";
+  return "Las recargas, planes y retiros ya están disponibles desde el lanzamiento oficial.";
 }

@@ -97,6 +97,7 @@ export default function Tasks() {
   const levelName = dashboard?.levelConfig?.name || "Pasantía";
   const levelNumber = dashboard?.activeLevel ?? 0;
   const displayQuestionTitle = question?.chartType ? `Escenario ${question?.asset || "MARKET"}` : question?.title;
+  const taskLockedBySchedule = dashboard && dashboard.taskDayAllowed === false;
 
   const options = useMemo(() => {
     if (!question) return [];
@@ -147,6 +148,13 @@ export default function Tasks() {
               <img src="/royal-icon.svg" alt="Royal Imperial" />
               <h3>Tareas no disponibles</h3>
               <p>Contacta soporte si no puedes ver tu nivel de pasantía.</p>
+            </div>
+          ) : taskLockedBySchedule ? (
+            <div className="validation-state task-wait-state">
+              <img className="task-state-icon" src={relojIcon} alt="" aria-hidden="true" />
+              <h3>Horario de tareas</h3>
+              <p>{dashboard?.workRestrictionMessage || "Las tareas IA de planes R1 en adelante están disponibles de lunes a viernes, de 09:00 a 18:00 GMT-5."}</p>
+              <button className="secondary-btn" type="button" onClick={load}>Actualizar</button>
             </div>
           ) : (dashboard?.today?.remaining || 0) <= 0 ? (
             <div className="task-complete-mini">
