@@ -102,7 +102,7 @@ async function getVipStatus(req, res) {
       highestPurchasedLevel,
       rules: {
         concept: "AI Market Training",
-        minimumWithdrawUsdt: 3,
+        minimumWithdrawUsdt: 10,
         withdrawFeePercent: 10,
         referralDirectPercent: 7,
         referralIndirectPercent: 2,

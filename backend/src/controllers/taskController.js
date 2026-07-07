@@ -13,19 +13,43 @@ function getPeruDateString(date = new Date()) {
   const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${map.year}-${map.month}-${map.day}`;
 }
-function isPeruWorkday(date = new Date()) {
-  const day = new Intl.DateTimeFormat("en-US", {
+function getPeruTimeParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Lima",
     weekday: "short",
-  }).format(date);
-  return !["Sat", "Sun"].includes(day);
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return {
+    weekday: map.weekday || "",
+    hour: Number(map.hour || 0),
+    minute: Number(map.minute || 0),
+  };
+}
+
+function isPeruWorkday(date = new Date()) {
+  const { weekday } = getPeruTimeParts(date);
+  return !["Sat", "Sun"].includes(weekday);
+}
+
+function isPeruWorkHour(date = new Date()) {
+  const { hour } = getPeruTimeParts(date);
+  return hour >= 9 && hour < 18;
 }
 
 // Royal Imperial AI:
 // - Pasantía / plan gratis (nivel 0): disponible de lunes a domingo.
-// - Planes R1+ (niveles pagados): disponibles de lunes a viernes.
+// - Planes R1+ (niveles pagados): lunes a viernes, 09:00 a 18:00 GMT-5.
 function isTaskDayAllowed(activeLevel, date = new Date()) {
-  return Number(activeLevel || 0) === 0 || isPeruWorkday(date);
+  if (Number(activeLevel || 0) === 0) return true;
+  return isPeruWorkday(date) && isPeruWorkHour(date);
+}
+
+function getTaskWorkRestrictionMessage(activeLevel) {
+  if (Number(activeLevel || 0) === 0) return null;
+  return "Las tareas IA de planes R1 en adelante están disponibles de lunes a viernes, de 09:00 a 18:00 GMT-5.";
 }
 function diffCalendarDays(start, end = new Date()) {
   const startDate = getPeruDateString(new Date(start));
@@ -139,6 +163,7 @@ async function getTasksDashboard(req, res) {
     const activeLevel = await getActiveLevel(client, userId);
     const rawCfg = await getRuntimeLevelConfig(client, activeLevel);
     const workday = isPeruWorkday();
+    const workHour = isPeruWorkHour();
     const taskDayAllowed = isTaskDayAllowed(activeLevel);
     const trialActive = activeLevel > 0 ? true : isTrialActive(userResult.rows[0]);
     const cfg = rawCfg;
@@ -177,10 +202,11 @@ async function getTasksDashboard(req, res) {
       activeLevel,
       levelConfig: cfg ? { ...cfg, cooldownLabel: getCooldownLabel(cfg.cooldownSeconds) } : null,
       workday,
+      workHour,
       taskDayAllowed,
       trialActive,
       workRestrictionMessage: !taskDayAllowed
-        ? "Las tareas IA de planes R1 en adelante están disponibles de lunes a viernes. La pasantía sí está activa de lunes a domingo."
+        ? getTaskWorkRestrictionMessage(activeLevel)
         : (!trialActive ? "Tu pasantía de 5 días finalizó. Compra un plan para continuar." : null),
       today: { completed, limit, remaining, rewardUsdt: rewardToday, nextResetAt },
       accuracy,
@@ -224,7 +250,7 @@ async function completeVipTask(req, res) {
     const activeLevel = await getActiveLevel(client, userId);
     if (!isTaskDayAllowed(activeLevel)) {
       await client.query("ROLLBACK");
-      return res.status(400).json({ message: "Las tareas IA de planes R1 en adelante están disponibles de lunes a viernes. La pasantía sí está activa de lunes a domingo." });
+      return res.status(400).json({ message: getTaskWorkRestrictionMessage(activeLevel) });
     }
 
     if (activeLevel === 0 && !isTrialActive(userResult.rows[0])) {

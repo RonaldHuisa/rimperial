@@ -176,7 +176,7 @@ async function seedRoyalVipPackages(client) {
         price_usdt = vip_packages.price_usdt,
         daily_income_usdt = vip_packages.daily_income_usdt,
         valid_days = vip_packages.valid_days,
-        is_purchasable = vip_packages.is_purchasable,
+        is_purchasable = EXCLUDED.is_purchasable,
         task_reward_usdt = vip_packages.task_reward_usdt,
         task_cooldown_minutes = vip_packages.task_cooldown_minutes,
         task_cooldown_seconds = vip_packages.task_cooldown_seconds,
@@ -186,6 +186,9 @@ async function seedRoyalVipPackages(client) {
       [pkg.level, cfg.name, pkg.price, cfg.rewardUsdt * cfg.dailyTasks, pkg.validDays, cfg.rewardUsdt, cfg.cooldownSeconds, cfg.dailyTasks, pkg.isPurchasable !== false]
     );
   }
+
+  // Lanzamiento oficial: todos los planes R1-R8 quedan disponibles para compra.
+  await client.query(`UPDATE vip_packages SET is_purchasable = true, updated_at = NOW() WHERE level BETWEEN 1 AND 8`);
 }
 
 module.exports = { LEVEL_CONFIG, getLevelConfig, getRuntimeLevelConfig, getCooldownLabel, ensureRoyalAiSchema, seedRoyalVipPackages };

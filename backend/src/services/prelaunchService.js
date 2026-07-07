@@ -8,7 +8,7 @@ const DEFAULT_CONFIG = {
   inviteRewardUsdt: 1,
   tiktokRewardUsdt: 4,
   maxBonusUsdt: 10,
-  blockFinancialActions: true,
+  blockFinancialActions: false,
 };
 
 function toNumber(value, fallback = 0) {
@@ -62,7 +62,7 @@ async function ensurePrelaunchSchema(clientOrPool = pool) {
       invite_reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 1,
       tiktok_reward_usdt NUMERIC(38,18) NOT NULL DEFAULT 4,
       max_bonus_usdt NUMERIC(38,18) NOT NULL DEFAULT 10,
-      block_financial_actions BOOLEAN NOT NULL DEFAULT TRUE,
+      block_financial_actions BOOLEAN NOT NULL DEFAULT FALSE,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -83,7 +83,7 @@ async function ensurePrelaunchSchema(clientOrPool = pool) {
       invite_reward_usdt = 1,
       tiktok_reward_usdt = 4,
       max_bonus_usdt = 10,
-      block_financial_actions = TRUE,
+      block_financial_actions = FALSE,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = 1
   `);
@@ -359,8 +359,11 @@ async function getPrelaunchStatus(userId, clientOrPool = pool, options = {}) {
 }
 
 async function isPrelaunchFinancialActionsBlocked(clientOrPool = pool) {
-  const config = await getConfig(clientOrPool);
-  return Boolean(config.isActive && config.blockFinancialActions);
+  // Lanzamiento oficial activo:
+  // recargas, compra de planes y retiros ya no se bloquean por pre-lanzamiento.
+  // Se conserva la función para compatibilidad con rutas existentes.
+  await ensurePrelaunchSchema(clientOrPool).catch(() => {});
+  return false;
 }
 
 module.exports = {

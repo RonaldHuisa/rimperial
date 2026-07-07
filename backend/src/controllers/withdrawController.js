@@ -12,7 +12,7 @@ const { ensureNotBanned, ensureWithdrawAllowedByRegisterIp, logSecurityEvent } =
 const { getUserProfileBundle, isProfileComplete } = require("../services/profileService");
 
 const WITHDRAW_FEE_PERCENT = 10;
-const MIN_WITHDRAW_USDT = 3;
+const MIN_WITHDRAW_USDT = 10;
 const AUTO_WITHDRAW_MAX_USDT = 100;
 
 
@@ -26,18 +26,43 @@ const WITHDRAW_DAY_NAMES = {
     6: "sábado",
 };
 
-// Royal Imperial AI: retiros disponibles de lunes a viernes,
-// dentro del horario 16:00 a 20:00 UTC. No depende del nivel.
-const WITHDRAW_ALLOWED_DAYS = [1, 2, 3, 4, 5];
-const WITHDRAW_ALLOWED_DAYS_LABEL = "lunes a viernes";
-const WITHDRAW_WINDOW_UTC = {
-    startHour: 16,
-    endHour: 20,
-    label: "16:00 a 20:00 UTC",
+// Royal Imperial AI: retiros por plan, de 09:00 a 18:00 GMT-5.
+// R1-R2: lunes · R3-R4: martes · R5-R6: miércoles · R7-R8: jueves.
+const WITHDRAW_WINDOW_GMT5 = {
+    startHour: 9,
+    endHour: 18,
+    label: "09:00 a 18:00 GMT-5",
 };
 
-function getUtcWeekday(date = new Date()) {
-    return date.getUTCDay();
+function getGmt5Parts(date = new Date()) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Lima",
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    }).formatToParts(date);
+    const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    const weekdayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    return {
+        weekday: weekdayMap[map.weekday] ?? 0,
+        hour: Number(map.hour || 0),
+        minute: Number(map.minute || 0),
+    };
+}
+
+function getWithdrawAllowedDaysByLevel(vipLevel) {
+    const level = Number(vipLevel || 0);
+    if (level === 1 || level === 2) return [1];
+    if (level === 3 || level === 4) return [2];
+    if (level === 5 || level === 6) return [3];
+    if (level === 7 || level === 8) return [4];
+    return [];
+}
+
+function getAllowedDaysLabel(allowedDays = []) {
+    if (!allowedDays.length) return "día no asignado";
+    return allowedDays.map((day) => WITHDRAW_DAY_NAMES[day]).join(" y ");
 }
 
 function getNextWithdrawDayLabel(allowedDays, todayDow) {
@@ -50,33 +75,36 @@ function getNextWithdrawDayLabel(allowedDays, todayDow) {
 }
 
 function isWithdrawWindowOpen(date = new Date()) {
-    const hour = date.getUTCHours();
-
-    return hour >= WITHDRAW_WINDOW_UTC.startHour && hour < WITHDRAW_WINDOW_UTC.endHour;
+    const { hour } = getGmt5Parts(date);
+    return hour >= WITHDRAW_WINDOW_GMT5.startHour && hour < WITHDRAW_WINDOW_GMT5.endHour;
 }
 
 function buildWithdrawDayPolicy(vipLevel, date = new Date()) {
     const level = Number(vipLevel || 0);
-    const todayDow = getUtcWeekday(date);
-    const allowedToday = WITHDRAW_ALLOWED_DAYS.includes(todayDow);
+    const { weekday: todayDow } = getGmt5Parts(date);
+    const allowedDays = getWithdrawAllowedDaysByLevel(level);
+    const allowedDaysLabel = getAllowedDaysLabel(allowedDays);
+    const allowedToday = allowedDays.includes(todayDow);
     const nextWithdrawDay = allowedToday
         ? WITHDRAW_DAY_NAMES[todayDow]
-        : getNextWithdrawDayLabel(WITHDRAW_ALLOWED_DAYS, todayDow);
+        : getNextWithdrawDayLabel(allowedDays, todayDow);
+
+    const activeVipName = level >= 1 ? `R${level}` : "Sin plan activo";
 
     return {
         allowedToday,
         activeVipLevel: level,
         todayDow,
         todayName: WITHDRAW_DAY_NAMES[todayDow],
-        allowedDays: WITHDRAW_ALLOWED_DAYS,
-        allowedDaysLabel: WITHDRAW_ALLOWED_DAYS_LABEL,
+        allowedDays,
+        allowedDaysLabel,
         nextWithdrawDay,
-        timezone: "UTC",
-        scheduleLabel: WITHDRAW_WINDOW_UTC.label,
-        activeVipName: level >= 1 ? `Royal-${level}` : "Sin nivel activo",
+        timezone: "GMT-5",
+        scheduleLabel: WITHDRAW_WINDOW_GMT5.label,
+        activeVipName,
         message: allowedToday
-            ? `Retiros disponibles de ${WITHDRAW_ALLOWED_DAYS_LABEL}, en horario ${WITHDRAW_WINDOW_UTC.label}.`
-            : `Los retiros están disponibles de ${WITHDRAW_ALLOWED_DAYS_LABEL}, en horario ${WITHDRAW_WINDOW_UTC.label}. Próximo día disponible: ${nextWithdrawDay} (UTC).`,
+            ? `Tu plan ${activeVipName} puede retirar los ${allowedDaysLabel}, en horario ${WITHDRAW_WINDOW_GMT5.label}.`
+            : `Tu plan ${activeVipName} puede retirar los ${allowedDaysLabel}, en horario ${WITHDRAW_WINDOW_GMT5.label}. Próximo día disponible: ${nextWithdrawDay || allowedDaysLabel} (GMT-5).`,
     };
 }
 
@@ -382,7 +410,7 @@ async function getWithdrawInfo(req, res) {
         else if (!personalDataComplete) withdrawRequirementMessage = "Completa tus datos personales antes de retirar.";
         else if (!hasWithdrawalAccount) withdrawRequirementMessage = "Registra una cuenta de retiro antes de continuar.";
         else if (!groupValidated) withdrawRequirementMessage = "Tu cuenta de retiro está pendiente de validación por soporte.";
-        else if (!isWithdrawWindowOpen()) withdrawRequirementMessage = `Los retiros están disponibles de ${WITHDRAW_ALLOWED_DAYS_LABEL}, únicamente en horario ${WITHDRAW_WINDOW_UTC.label}.`;
+        else if (!isWithdrawWindowOpen()) withdrawRequirementMessage = `Los retiros están disponibles únicamente en horario ${WITHDRAW_WINDOW_GMT5.label}.`;
         if (userSecurity.isBanned) withdrawRequirementMessage = userSecurity.bannedReason || "Cuenta no habilitada para retiros.";
         if (userSecurity.isSuspicious) withdrawRequirementMessage = userSecurity.suspiciousReason || "Cuenta en revisión de seguridad.";
 
@@ -667,7 +695,7 @@ async function createWithdrawRequest(req, res) {
         if (!isWithdrawWindowOpen()) {
             await client.query("ROLLBACK");
             return res.status(400).json({
-                message: `Los retiros están disponibles de ${WITHDRAW_ALLOWED_DAYS_LABEL}, únicamente en horario ${WITHDRAW_WINDOW_UTC.label}.`,
+                message: `Los retiros están disponibles únicamente en horario ${WITHDRAW_WINDOW_GMT5.label}.`,
                 withdrawalWindowAllowed: false,
                 withdrawalDayAllowed: true,
                 withdrawalDayPolicy: withdrawDayPolicy,
