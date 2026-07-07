@@ -1307,9 +1307,151 @@ function RedeemCodesAdminPanel() {
 
 function SecurityPanel() {
   const [data, setData] = useState(null);
-  const load = useCallback(async () => { const res = await api.get("/admin/security"); setData(res.data); }, []);
+  const [ipDetail, setIpDetail] = useState(null);
+  const [loadingIp, setLoadingIp] = useState(false);
+  const [actionMessage, setActionMessage] = useState("");
+  const [actionError, setActionError] = useState("");
+
+  const load = useCallback(async () => {
+    const res = await api.get("/admin/security");
+    setData(res.data);
+  }, []);
+
   useEffect(() => { load().catch(() => {}); }, [load]);
-  return <div className="page-stack"><div className="metric-grid admin-metrics"><MetricCard icon={<FiAlertTriangle />} label="Sospechosos" value={compact(data?.suspiciousUsers?.length)} /><MetricCard icon={<FiShield />} label="Baneados" value={compact(data?.bannedUsers?.length)} /><MetricCard icon={<FiDatabase />} label="IPs repetidas" value={compact(data?.ipGroups?.length)} /><MetricCard icon={<FiActivity />} label="Eventos" value={compact(data?.events?.length)} /></div><div className="two-columns admin-two"><div className="panel-card"><div className="section-title"><span>IPs</span><h3>Registros repetidos</h3></div><PaginatedAdminTable pageSize={10} rows={data?.ipGroups || []} columns={[{ key: "ip_address", label: "IP" }, { key: "accounts", label: "Cuentas" }]} /></div><div className="panel-card"><div className="section-title"><span>Eventos</span><h3>Últimos registros</h3></div><PaginatedAdminTable pageSize={10} rows={data?.events || []} columns={[{ key: "event_type", label: "Evento" }, { key: "user_email", label: "Usuario" }, { key: "ip_address", label: "IP" }, { key: "created_at", label: "Fecha", render: (r) => shortDate(r.created_at) }]} /></div></div></div>;
+
+  const openIpDetail = async (ip) => {
+    if (!ip) return;
+    setLoadingIp(true);
+    setActionMessage("");
+    setActionError("");
+    try {
+      const res = await api.get(`/admin/security/ip-users?ip=${encodeURIComponent(ip)}`);
+      setIpDetail(res.data);
+    } catch (err) {
+      setActionError(err.response?.data?.message || "No se pudo cargar usuarios de la IP.");
+    } finally {
+      setLoadingIp(false);
+    }
+  };
+
+  const updateUserSecurity = async (user, patch) => {
+    setActionMessage("");
+    setActionError("");
+    try {
+      await api.patch(`/admin/users/${user.id}`, patch);
+      setActionMessage("Usuario actualizado correctamente.");
+      if (ipDetail?.ip) await openIpDetail(ipDetail.ip);
+      await load();
+    } catch (err) {
+      setActionError(err.response?.data?.message || "No se pudo actualizar el usuario.");
+    }
+  };
+
+  return (
+    <div className="page-stack">
+      {actionMessage && <div className="alert success">{actionMessage}</div>}
+      {actionError && <div className="alert error">{actionError}</div>}
+      <div className="metric-grid admin-metrics">
+        <MetricCard icon={<FiAlertTriangle />} label="Sospechosos" value={compact(data?.suspiciousUsers?.length)} />
+        <MetricCard icon={<FiShield />} label="Baneados" value={compact(data?.bannedUsers?.length)} />
+        <MetricCard icon={<FiDatabase />} label="IPs repetidas" value={compact(data?.ipGroups?.length)} />
+        <MetricCard icon={<FiActivity />} label="Eventos" value={compact(data?.events?.length)} />
+      </div>
+
+      <div className="two-columns admin-two">
+        <div className="panel-card">
+          <div className="section-title">
+            <span>IPs</span>
+            <h3>Registros repetidos</h3>
+          </div>
+          <PaginatedAdminTable
+            pageSize={10}
+            rows={data?.ipGroups || []}
+            columns={[
+              { key: "ip_address", label: "IP" },
+              { key: "accounts", label: "Cuentas" },
+              {
+                key: "actions",
+                label: "Usuarios",
+                render: (r) => (
+                  <button className="table-action-btn" type="button" onClick={() => openIpDetail(r.ip_address)} disabled={loadingIp}>
+                    Ver usuarios
+                  </button>
+                ),
+              },
+            ]}
+          />
+        </div>
+
+        <div className="panel-card">
+          <div className="section-title">
+            <span>Eventos</span>
+            <h3>Últimos registros</h3>
+          </div>
+          <PaginatedAdminTable
+            pageSize={10}
+            rows={data?.events || []}
+            columns={[
+              { key: "event_type", label: "Evento" },
+              { key: "user_email", label: "Usuario" },
+              { key: "ip_address", label: "IP" },
+              { key: "created_at", label: "Fecha", render: (r) => shortDate(r.created_at) },
+            ]}
+          />
+        </div>
+      </div>
+
+      {ipDetail && (
+        <div className="modal-backdrop" onClick={() => setIpDetail(null)}>
+          <div className="admin-modal admin-ip-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <span className="eyebrow">Multicuenta / IP repetida</span>
+                <h3>{ipDetail.ip}</h3>
+                <p>{compact(ipDetail.users?.length)} usuarios relacionados por registro o login.</p>
+              </div>
+              <button className="icon-btn" type="button" onClick={() => setIpDetail(null)}>×</button>
+            </div>
+
+            <PaginatedAdminTable
+              pageSize={12}
+              rows={ipDetail.users || []}
+              empty="No se encontraron usuarios para esta IP."
+              columns={[
+                { key: "email", label: "Usuario" },
+                { key: "active_level", label: "Nivel", render: (r) => Number(r.active_level || 0) >= 1 ? `R${r.active_level}` : "Sin nivel" },
+                { key: "ip_match", label: "Coincidencia" },
+                { key: "recharge_balance_usdt", label: "Garantía", render: (r) => money(r.recharge_balance_usdt) },
+                { key: "withdrawable_usdt", label: "Retirable", render: (r) => money(r.withdrawable_usdt) },
+                { key: "status", label: "Estado", render: (r) => <div className="badge-row">{r.is_suspicious && <StatusBadge tone="warning">Sospechoso</StatusBadge>}{r.is_banned && <StatusBadge tone="danger">Baneado</StatusBadge>}{!r.is_suspicious && !r.is_banned && <StatusBadge tone="success">Normal</StatusBadge>}{r.withdraw_enabled && <StatusBadge>Retiro OK</StatusBadge>}</div> },
+                { key: "created_at", label: "Registro", render: (r) => shortDate(r.created_at) },
+                {
+                  key: "actions",
+                  label: "Acción",
+                  render: (r) => (
+                    <div className="table-actions security-actions">
+                      <button
+                        type="button"
+                        onClick={() => updateUserSecurity(r, { isSuspicious: !r.is_suspicious, suspiciousReason: r.is_suspicious ? "" : `IP repetida detectada: ${ipDetail.ip}` })}
+                      >
+                        {r.is_suspicious ? "Quitar sospecha" : "Marcar sospechoso"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateUserSecurity(r, { isBanned: !r.is_banned, bannedReason: r.is_banned ? "" : `Posible multicuenta por IP repetida: ${ipDetail.ip}` })}
+                      >
+                        {r.is_banned ? "Desbanear" : "Banear"}
+                      </button>
+                    </div>
+                  ),
+                },
+              ]}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function CreditPointsPanel() {

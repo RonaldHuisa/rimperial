@@ -16994,3 +16994,41 @@ b,
     object-fit: contain !important;
   }
 }
+
+/* v1.0.55 — Admin Seguridad: detalle de IP repetida y acciones multicuenta */
+.admin-ip-detail-modal {
+  width: min(1180px, 96vw);
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.admin-ip-detail-modal .admin-table-wrap {
+  max-height: 62vh;
+  overflow: auto;
+}
+
+.security-actions {
+  min-width: 220px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.security-actions button {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .admin-ip-detail-modal {
+    width: 96vw;
+    padding: 16px;
+  }
+
+  .admin-ip-detail-modal .admin-table-wrap {
+    max-height: 64vh;
+  }
+
+  .security-actions {
+    min-width: 180px;
+  }
+}
