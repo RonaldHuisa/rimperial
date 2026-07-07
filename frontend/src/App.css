@@ -16803,3 +16803,80 @@ b,
 .article-editor-grid textarea {
   white-space: pre-wrap;
 }
+
+/* v1.0.51 — Noticias con formato simple tipo Markdown */
+.compact-article-content p,
+.compact-article-content li,
+.compact-article-content blockquote,
+.compact-article-hero p,
+.compact-news-card p,
+.news-card p,
+.article-hero p,
+.article-content p,
+.article-content li,
+.article-content blockquote {
+  white-space: pre-line;
+}
+
+.compact-article-content strong,
+.compact-article-hero strong,
+.compact-news-card strong:not(:last-child),
+.article-content strong,
+.article-hero strong {
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.compact-article-content em,
+.compact-article-hero em,
+.compact-news-card em,
+.article-content em,
+.article-hero em {
+  font-style: italic;
+}
+
+.compact-article-content code,
+.compact-article-hero code,
+.compact-news-card code,
+.article-content code,
+.article-hero code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.92em;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(126, 100, 232, 0.10);
+  border: 1px solid rgba(126, 100, 232, 0.16);
+}
+
+.compact-article-content a,
+.compact-article-hero a,
+.compact-news-card a,
+.article-content a,
+.article-hero a {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.compact-article-content ul,
+.compact-article-content ol,
+.article-content ul,
+.article-content ol {
+  margin: 10px 0 16px;
+  padding-left: 22px;
+  color: var(--text-secondary);
+  line-height: 1.72;
+}
+
+.compact-article-content li,
+.article-content li {
+  margin: 6px 0;
+}
+
+.compact-article-content h3,
+.compact-article-content h4,
+.article-content h3,
+.article-content h4 {
+  margin: 18px 0 8px;
+  color: var(--text-primary);
+}

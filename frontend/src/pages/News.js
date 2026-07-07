@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FiBookOpen, FiArrowRight, FiArrowLeft } from "react-icons/fi";
 import api from "../services/api";
+import { renderInlineFormat } from "../utils/richText";
 
 function imageUrl(src) {
   if (!src) return "";
@@ -36,7 +37,7 @@ export default function News() {
             <div>
               <span>{article.publishedAt ? new Date(article.publishedAt).toLocaleDateString() : "Royal Imperial AI"}</span>
               <h3>{article.title}</h3>
-              <p>{article.summary}</p>
+              <p>{renderInlineFormat(article.summary, `news-summary-${article.id}`)}</p>
               <strong>Leer artículo <FiArrowRight /></strong>
             </div>
           </Link>
