@@ -994,6 +994,21 @@ function NewsAdminPanel() {
   const remove = async (row) => { if (!window.confirm("¿Eliminar esta noticia?")) return; await api.delete(`/admin/articles/${row.id}`); await load(pagination.page); };
   const updateSection = (idx, patch) => setEditing((prev) => ({ ...prev, sections: prev.sections.map((s, i) => i === idx ? { ...s, ...patch } : s) }));
   const addSection = () => setEditing((prev) => ({ ...prev, sections: [...(prev.sections || []), emptySection()] }));
+  const insertSectionAt = (idx) => setEditing((prev) => {
+    const sections = [...(prev.sections || [])];
+    const safeIndex = Math.max(0, Math.min(idx, sections.length));
+    sections.splice(safeIndex, 0, emptySection());
+    return { ...prev, sections };
+  });
+  const insertSectionAfter = (idx) => insertSectionAt(idx + 1);
+  const moveSection = (idx, direction) => setEditing((prev) => {
+    const sections = [...(prev.sections || [])];
+    const nextIndex = idx + direction;
+    if (nextIndex < 0 || nextIndex >= sections.length) return prev;
+    const [section] = sections.splice(idx, 1);
+    sections.splice(nextIndex, 0, section);
+    return { ...prev, sections };
+  });
   const removeSection = (idx) => setEditing((prev) => ({ ...prev, sections: prev.sections.filter((_, i) => i !== idx) }));
   return (
     <div className="page-stack">
@@ -1029,10 +1044,20 @@ function NewsAdminPanel() {
             </div>
             {editing.coverImageUrl && <img className="article-cover-preview" src={imageUrl(editing.coverImageUrl)} alt="Portada" />}
             <div className="section-title"><span>Contenido</span><h3>Secciones del artículo</h3></div>
+            <div className="upload-note article-section-help"><small>Ahora puedes insertar una sección arriba o debajo de cualquier bloque. El orden visible aquí será el mismo orden que verá el usuario en la noticia.</small></div>
             <div className="article-sections-editor">
               {(editing.sections || []).map((section, idx) => (
                 <div className="article-section-form" key={section.id || idx}>
-                  <div className="article-section-head"><strong>Sección {idx + 1}</strong><button type="button" className="icon-btn" onClick={() => removeSection(idx)}><FiTrash2 /></button></div>
+                  <div className="article-section-head">
+                    <strong>Sección {idx + 1}</strong>
+                    <div className="article-section-actions">
+                      <button type="button" className="section-action-btn" onClick={() => insertSectionAt(idx)}>+ arriba</button>
+                      <button type="button" className="section-action-btn" onClick={() => insertSectionAfter(idx)}>+ abajo</button>
+                      <button type="button" className="section-action-btn compact" onClick={() => moveSection(idx, -1)} disabled={idx === 0}>↑</button>
+                      <button type="button" className="section-action-btn compact" onClick={() => moveSection(idx, 1)} disabled={idx === (editing.sections || []).length - 1}>↓</button>
+                      <button type="button" className="icon-btn danger-icon" onClick={() => removeSection(idx)}><FiTrash2 /></button>
+                    </div>
+                  </div>
                   <label><span>Tipo</span><select value={section.type} onChange={(e) => updateSection(idx, { type: e.target.value })}><option value="paragraph">Párrafo</option><option value="heading">Título</option><option value="image">Imagen</option><option value="quote">Cita</option></select></label>
                   <label><span>Título / alt</span><input value={section.title || ""} onChange={(e) => updateSection(idx, { title: e.target.value, imageAlt: e.target.value })} /></label>
                   {section.type === "image" && <><label><span>Ruta o URL imagen</span><input value={section.imageUrl || ""} onChange={(e) => updateSection(idx, { imageUrl: e.target.value })} placeholder="/uploads/news/seccion-1.webp o https://..." /></label><div className="upload-note"><small>Usa imágenes guardadas en <code>frontend/public/uploads/news/</code> o una URL externa.</small></div>{section.imageUrl && <img className="section-image-preview" src={imageUrl(section.imageUrl)} alt="Vista" />}</>}

@@ -16880,3 +16880,61 @@ b,
   margin: 18px 0 8px;
   color: var(--text-primary);
 }
+
+
+/* v1.0.91 — editor de noticias: insertar secciones en medio */
+.article-section-help {
+  margin: 4px 0 12px;
+}
+
+.article-section-head {
+  align-items: flex-start;
+}
+
+.article-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.section-action-btn {
+  border: 1px solid var(--line);
+  background: var(--surface-solid, var(--surface));
+  color: var(--text);
+  min-height: 32px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.section-action-btn.compact {
+  min-width: 34px;
+  padding: 7px 8px;
+}
+
+.section-action-btn:hover:not(:disabled) {
+  border-color: rgba(126, 100, 232, .42);
+}
+
+.section-action-btn:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+}
+
+@media (max-width: 620px) {
+  .article-section-head {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .article-section-actions {
+    justify-content: flex-start;
+  }
+
+  .section-action-btn {
+    flex: 1 1 auto;
+  }
+}
