@@ -18,14 +18,14 @@ const LEVEL_CONFIG = {
 
 const DEFAULT_PACKAGES = [
   { level: 0, name: "Pasantía", price: 0, validDays: 5, isPurchasable: false },
-  { level: 1, name: "R1", price: 30, validDays: 120 },
-  { level: 2, name: "R2", price: 80, validDays: 120 },
-  { level: 3, name: "R3", price: 150, validDays: 120 },
-  { level: 4, name: "R4", price: 300, validDays: 120 },
-  { level: 5, name: "R5", price: 600, validDays: 120 },
-  { level: 6, name: "R6", price: 1200, validDays: 120 },
-  { level: 7, name: "R7", price: 2500, validDays: 120 },
-  { level: 8, name: "R8", price: 5000, validDays: 120 },
+  { level: 1, name: "R1", price: 30, validDays: 120, isPurchasable: true },
+  { level: 2, name: "R2", price: 80, validDays: 120, isPurchasable: false },
+  { level: 3, name: "R3", price: 150, validDays: 120, isPurchasable: false },
+  { level: 4, name: "R4", price: 300, validDays: 120, isPurchasable: false },
+  { level: 5, name: "R5", price: 600, validDays: 120, isPurchasable: false },
+  { level: 6, name: "R6", price: 1200, validDays: 120, isPurchasable: false },
+  { level: 7, name: "R7", price: 2500, validDays: 120, isPurchasable: false },
+  { level: 8, name: "R8", price: 5000, validDays: 120, isPurchasable: false },
 ];
 
 const DEFAULT_QUESTIONS = [
@@ -176,7 +176,7 @@ async function seedRoyalVipPackages(client) {
         price_usdt = vip_packages.price_usdt,
         daily_income_usdt = vip_packages.daily_income_usdt,
         valid_days = vip_packages.valid_days,
-        is_purchasable = EXCLUDED.is_purchasable,
+        is_purchasable = vip_packages.is_purchasable,
         task_reward_usdt = vip_packages.task_reward_usdt,
         task_cooldown_minutes = vip_packages.task_cooldown_minutes,
         task_cooldown_seconds = vip_packages.task_cooldown_seconds,
@@ -186,9 +186,6 @@ async function seedRoyalVipPackages(client) {
       [pkg.level, cfg.name, pkg.price, cfg.rewardUsdt * cfg.dailyTasks, pkg.validDays, cfg.rewardUsdt, cfg.cooldownSeconds, cfg.dailyTasks, pkg.isPurchasable !== false]
     );
   }
-
-  // Lanzamiento oficial: todos los planes R1-R8 quedan disponibles para compra.
-  await client.query(`UPDATE vip_packages SET is_purchasable = true, updated_at = NOW() WHERE level BETWEEN 1 AND 8`);
 }
 
 module.exports = { LEVEL_CONFIG, getLevelConfig, getRuntimeLevelConfig, getCooldownLabel, ensureRoyalAiSchema, seedRoyalVipPackages };
