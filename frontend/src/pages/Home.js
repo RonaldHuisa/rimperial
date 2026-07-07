@@ -167,7 +167,6 @@ export default function Home() {
           <Link to="/history"><RoyalPanelIcon src={historialIcon} /><span><strong>Movimientos</strong><small>Historial de cuenta</small></span><FiArrowRight /></Link>
           <Link to={latestArticle ? `/news/${latestArticle.slug}` : "/news"}><span className="safe-free-emoji" aria-hidden="true">📰</span><span><strong>Noticias</strong><small>{latestArticle?.title || "Novedades oficiales"}</small></span><FiArrowRight /></Link>
           <Link to="/support"><RoyalPanelIcon src={soporteIcon} /><span><strong>Centro de ayuda</strong><small>Soporte oficial</small></span><FiArrowRight /></Link>
-          <Link to="/prelaunch"><img className="royal-panel-icon safe-rocket-row-icon" src="/prelaunch-rocket.png" alt="" aria-hidden="true" loading="lazy" /><span><strong>Pre-lanzamiento</strong><small>Bono fundador activo</small></span><FiArrowRight /></Link>
         </section>
       </div>
     );
