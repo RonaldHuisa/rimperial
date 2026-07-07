@@ -750,6 +750,65 @@ async function getAdminSecurity(req, res) {
   }
 }
 
+
+async function getAdminSecurityIpUsers(req, res) {
+  const ip = String(req.query.ip || '').trim();
+  if (!ip) return res.status(400).json({ message: "IP inválida." });
+
+  try {
+    const result = await pool.query(
+      `
+      WITH active_levels AS (
+        SELECT DISTINCT ON (user_id)
+          user_id,
+          level,
+          status,
+          activated_at,
+          expires_at
+        FROM vip_purchases
+        WHERE status IN ('active','expired','completed')
+        ORDER BY user_id, CASE WHEN status='active' THEN 0 ELSE 1 END, level DESC, activated_at DESC NULLS LAST, id DESC
+      )
+      SELECT
+        u.id,
+        u.email,
+        u.referral_code,
+        u.created_at,
+        u.register_ip,
+        u.last_login_ip,
+        u.last_login_at,
+        COALESCE(al.level, 0)::int AS active_level,
+        al.status AS plan_status,
+        COALESCE(u.recharge_balance_usdt, 0) AS recharge_balance_usdt,
+        COALESCE(u.withdrawable_usdt, 0) AS withdrawable_usdt,
+        COALESCE(u.credit_points, 50) AS credit_points,
+        COALESCE(u.withdraw_enabled, false) AS withdraw_enabled,
+        COALESCE(u.is_suspicious, false) AS is_suspicious,
+        u.suspicious_reason,
+        COALESCE(u.is_banned, false) AS is_banned,
+        u.banned_reason,
+        CASE
+          WHEN u.register_ip = $1 AND u.last_login_ip = $1 THEN 'registro y login'
+          WHEN u.register_ip = $1 THEN 'registro'
+          WHEN u.last_login_ip = $1 THEN 'login'
+          ELSE 'relacionado'
+        END AS ip_match
+      FROM users u
+      LEFT JOIN active_levels al ON al.user_id = u.id
+      WHERE u.register_ip = $1 OR u.last_login_ip = $1
+      ORDER BY u.created_at DESC, u.id DESC
+      LIMIT 120
+      `,
+      [ip]
+    );
+
+    return res.json({ ip, users: result.rows });
+  } catch (error) {
+    console.error("ADMIN SECURITY IP USERS ERROR:", error);
+    return res.status(500).json({ message: "Error al cargar usuarios de la IP.", detail: error.message });
+  }
+}
+
 function normalizeRedeemCode(value) {
   return String(value || "")
     .trim()
@@ -1246,4 +1305,5 @@ module.exports = {
   updateAdminRedeemCode,
   listAdminRedeemRedemptions,
   getAdminSecurity,
+  getAdminSecurityIpUsers,
 };

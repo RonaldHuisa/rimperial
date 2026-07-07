@@ -13,6 +13,7 @@ const {
   listAdminLevels,
   updateAdminLevel,
   getAdminSecurity,
+  getAdminSecurityIpUsers,
   listAdminRoulettePrizes,
   createAdminRoulettePrize,
   updateAdminRoulettePrize,
@@ -47,6 +48,7 @@ router.patch("/tasks/:questionId", updateAdminTask);
 router.get("/levels", listAdminLevels);
 router.patch("/levels/:level", updateAdminLevel);
 router.get("/security", getAdminSecurity);
+router.get("/security/ip-users", getAdminSecurityIpUsers);
 router.get("/roulette/prizes", listAdminRoulettePrizes);
 router.post("/roulette/prizes", createAdminRoulettePrize);
 router.patch("/roulette/prizes/:prizeId", updateAdminRoulettePrize);
