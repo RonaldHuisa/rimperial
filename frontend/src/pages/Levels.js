@@ -141,7 +141,7 @@ export default function Levels() {
 
       {prelaunchNotice && (
         <div className="prelaunch-route-toast" role="status" aria-live="polite">
-          <strong>Recargas en pre-lanzamiento</strong>
+          <strong>Recargas habilitadas</strong>
           <small>{prelaunchNotice}</small>
         </div>
       )}
@@ -204,7 +204,7 @@ export default function Levels() {
               Para activar <strong>{planLabel(insufficient)}</strong> necesitas {money(insufficient.price)}.
               Tu saldo actual es {money(insufficient.balance)}.
             </p>
-            <small>Recargas disponibles después del pre-lanzamiento.</small>
+            <small>Recargas disponibles desde el lanzamiento oficial.</small>
             <button className="recharge-popup-btn" type="button" onClick={goRecharge}>Entendido</button>
           </div>
         </div>

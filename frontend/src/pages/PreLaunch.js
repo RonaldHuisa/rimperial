@@ -237,7 +237,7 @@ export default function PreLaunch() {
             </div>
             <ul>
               <li><FiCheck /> Usuarios registrados antes del 7 de julio.</li>
-              <li><FiCheck /> Recargas, retiros y compra de planes estarán disponibles en el lanzamiento oficial.</li>
+              <li><FiCheck /> Recargas, retiros y compra de planes ya están disponibles desde el lanzamiento oficial.</li>
               <li><FiCheck /> La pasantía y las tareas IA se pueden usar durante el pre-lanzamiento.</li>
               <li><FiCheck /> Los invitados deben validar su registro con un gerente.</li>
               <li><FiCheck /> Los bonos se acreditan como saldo de garantía.</li>

@@ -217,7 +217,7 @@ export default function AppShell({ children }) {
                     onClick={handleMobileRechargeClick}
                   >
                     <span className="mobile-panel-link-icon">{renderMobilePanelIcon(item)}</span>
-                    <span><strong>{item.label}</strong><small>Disponible después del pre-lanzamiento</small></span>
+                    <span><strong>{item.label}</strong><small>Disponible desde el lanzamiento</small></span>
                   </button>
                 ) : (
                   <NavLink

@@ -102,7 +102,7 @@ export default function Home() {
       <div className="page-stack home-safe-mobile">
         {rechargeNotice && (
           <div className="prelaunch-route-toast" role="status" aria-live="polite">
-            <strong>Recargas en pre-lanzamiento</strong>
+            <strong>Recargas habilitadas</strong>
             <small>{rechargeNotice}</small>
           </div>
         )}
@@ -128,7 +128,7 @@ export default function Home() {
         <section className="safe-action-grid" aria-label="Accesos principales">
           <button type="button" onClick={handleRechargeClick}>
             <RoyalPanelIcon src={recargaIcon} />
-            <span><strong>Recargar</strong><small>Disponible después del pre-lanzamiento</small></span>
+            <span><strong>Recargar</strong><small>Disponible desde el lanzamiento</small></span>
           </button>
           <Link to="/withdraw">
             <RoyalPanelIcon src={retiroIcon} />
@@ -177,7 +177,7 @@ export default function Home() {
     <div className="page-stack home-impact-v48">
       {rechargeNotice && (
         <div className="prelaunch-route-toast" role="status" aria-live="polite">
-          <strong>Recargas en pre-lanzamiento</strong>
+          <strong>Recargas habilitadas</strong>
           <small>{rechargeNotice}</small>
         </div>
       )}
@@ -219,7 +219,7 @@ export default function Home() {
           <span className="impact-action-icon"><RoyalPanelIcon src={recargaIcon} /></span>
           <div>
             <strong>Recargar</strong>
-            <small>Disponible después del pre-lanzamiento</small>
+            <small>Disponible desde el lanzamiento</small>
           </div>
           <FiArrowRight className="impact-go" />
         </button>
