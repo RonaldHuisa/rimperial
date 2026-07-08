@@ -763,11 +763,11 @@ async function getAdminSecurityIpUsers(req, res) {
           user_id,
           level,
           status,
-          activated_at,
+          purchased_at,
           expires_at
         FROM vip_purchases
         WHERE status IN ('active','expired','completed')
-        ORDER BY user_id, CASE WHEN status='active' THEN 0 ELSE 1 END, level DESC, activated_at DESC NULLS LAST, id DESC
+        ORDER BY user_id, CASE WHEN status='active' THEN 0 ELSE 1 END, level DESC, purchased_at DESC NULLS LAST, id DESC
       )
       SELECT
         u.id,
