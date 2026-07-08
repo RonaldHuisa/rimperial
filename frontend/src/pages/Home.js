@@ -128,7 +128,7 @@ export default function Home() {
         <section className="safe-action-grid" aria-label="Accesos principales">
           <button type="button" onClick={handleRechargeClick}>
             <RoyalPanelIcon src={recargaIcon} />
-            <span><strong>Recargar</strong><small>Disponible desde el lanzamiento</small></span>
+            <span><strong>Recargar</strong><small>Añadir garantía</small></span>
           </button>
           <Link to="/withdraw">
             <RoyalPanelIcon src={retiroIcon} />
@@ -218,7 +218,7 @@ export default function Home() {
           <span className="impact-action-icon"><RoyalPanelIcon src={recargaIcon} /></span>
           <div>
             <strong>Recargar</strong>
-            <small>Disponible desde el lanzamiento</small>
+            <small>Añadir garantía</small>
           </div>
           <FiArrowRight className="impact-go" />
         </button>
