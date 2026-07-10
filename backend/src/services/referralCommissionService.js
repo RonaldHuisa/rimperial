@@ -31,6 +31,108 @@ async function getCommissionPlan(client, level) {
   return result.rows[0] || null;
 }
 
+async function getUserPreviousMaxLevelBeforePurchase(client, userId, currentPurchaseId) {
+  const params = [userId];
+
+  let excludeCurrentPurchaseSql = "";
+
+  if (currentPurchaseId) {
+    params.push(currentPurchaseId);
+    excludeCurrentPurchaseSql = `AND id <> $${params.length}`;
+  }
+
+  const result = await client.query(
+    `
+    SELECT COALESCE(MAX(level), 0)::int AS previous_max_level
+    FROM vip_purchases
+    WHERE user_id = $1
+      ${excludeCurrentPurchaseSql}
+      AND level >= 1
+      AND status IN ('active', 'expired', 'completed', 'cancelled')
+    `,
+    params
+  );
+
+  return Number(result.rows[0]?.previous_max_level || 0);
+}
+
+async function calculateIncrementalCommissionBase({
+  client,
+  sourceUserId,
+  sourceId,
+  purchasedLevel,
+  sponsorMaxLevel,
+}) {
+  const commissionableLevel = Math.min(
+    Number(purchasedLevel || 0),
+    Number(sponsorMaxLevel || 0)
+  );
+
+  if (commissionableLevel < 1) {
+    return {
+      commissionableLevel: 0,
+      commissionBaseAmount: 0,
+      previousMaxLevel: 0,
+      previousCommissionableLevel: 0,
+      commissionablePlan: null,
+    };
+  }
+
+  const previousMaxLevel = await getUserPreviousMaxLevelBeforePurchase(
+    client,
+    sourceUserId,
+    sourceId
+  );
+
+  const previousCommissionableLevel = Math.min(
+    previousMaxLevel,
+    commissionableLevel
+  );
+
+  if (previousCommissionableLevel >= commissionableLevel) {
+    return {
+      commissionableLevel,
+      commissionBaseAmount: 0,
+      previousMaxLevel,
+      previousCommissionableLevel,
+      commissionablePlan: null,
+    };
+  }
+
+  const commissionablePlan = await getCommissionPlan(client, commissionableLevel);
+  if (!commissionablePlan) {
+    return {
+      commissionableLevel,
+      commissionBaseAmount: 0,
+      previousMaxLevel,
+      previousCommissionableLevel,
+      commissionablePlan: null,
+    };
+  }
+
+  let previousPlanPrice = 0;
+
+  if (previousCommissionableLevel >= 1) {
+    const previousPlan = await getCommissionPlan(
+      client,
+      previousCommissionableLevel
+    );
+
+    previousPlanPrice = Number(previousPlan?.price_usdt || 0);
+  }
+
+  const newPlanPrice = Number(commissionablePlan.price_usdt || 0);
+  const commissionBaseAmount = Math.max(0, newPlanPrice - previousPlanPrice);
+
+  return {
+    commissionableLevel,
+    commissionBaseAmount,
+    previousMaxLevel,
+    previousCommissionableLevel,
+    commissionablePlan,
+  };
+}
+
 async function createSingleReferralCommission({
   client,
   receiverUserId,
@@ -42,14 +144,42 @@ async function createSingleReferralCommission({
   sponsorMaxLevel,
   baseAmountUsdt,
 }) {
-  const commissionableLevel = Math.min(purchasedLevel, sponsorMaxLevel);
+  const {
+    commissionableLevel,
+    commissionBaseAmount,
+    previousMaxLevel,
+    previousCommissionableLevel,
+    commissionablePlan,
+  } = await calculateIncrementalCommissionBase({
+    client,
+    sourceUserId,
+    sourceId,
+    purchasedLevel,
+    sponsorMaxLevel,
+  });
+
   if (commissionableLevel < 1) return;
+  if (!commissionablePlan) return;
 
-  const commissionPlan = await getCommissionPlan(client, commissionableLevel);
-  if (!commissionPlan) return;
+  // Si el usuario vuelve a comprar el mismo plan, compra uno menor,
+  // o el receptor ya cobró comisión por ese valor anteriormente,
+  // no se genera una comisión duplicada.
+  if (commissionBaseAmount <= 0) {
+    console.log("REFERRAL COMMISSION SKIPPED", {
+      reason: "NO_INCREMENTAL_PLAN_VALUE",
+      receiverUserId,
+      sourceUserId,
+      sourceType,
+      sourceId,
+      purchasedLevel,
+      sponsorMaxLevel,
+      previousMaxLevel,
+      previousCommissionableLevel,
+      commissionableLevel,
+    });
 
-  const commissionBaseAmount = Number(commissionPlan.price_usdt || 0);
-  if (commissionBaseAmount <= 0) return;
+    return;
+  }
 
   const percent = referralDepth === 1 ? 7 : referralDepth === 2 ? 2 : 1;
 
@@ -123,7 +253,7 @@ async function createSingleReferralCommission({
       "referral_commission",
       referralDepth === 1 ? "Comisión directa Royal Imperial" : `Comisión indirecta Nivel ${referralDepth} Royal Imperial`,
       commission.amount_usdt,
-      `${percent}% sobre ${commissionPlan.name}. Nivel comprador: ${purchasedLevel}. Nivel máximo del receptor: ${sponsorMaxLevel}.`,
+      `${percent}% sobre valor incremental de ${commissionablePlan.name}. Base comisionable: ${commissionBaseAmount} USDT. Nivel comprador: ${purchasedLevel}. Nivel máximo del receptor: ${sponsorMaxLevel}. Nivel anterior comprador: ${previousMaxLevel}.`,
       "referral_commission",
       commission.id,
       JSON.stringify({
@@ -135,7 +265,9 @@ async function createSingleReferralCommission({
         purchasedLevel,
         sponsorMaxLevel,
         commissionableLevel,
-        commissionablePlanName: commissionPlan.name,
+        commissionablePlanName: commissionablePlan.name,
+        previousMaxLevel,
+        previousCommissionableLevel,
         originalBaseAmountUsdt: baseAmountUsdt,
         commissionBaseAmountUsdt: commissionBaseAmount,
       }),
@@ -156,9 +288,13 @@ async function createReferralCommissions(
   // - Nivel 1/directo: 7%.
   // - Nivel 2: 2%.
   // - Nivel 3: 1%.
-  // - Para cobrar, el receptor debe tener al menos un nivel activo o comprado.
+  // - Para cobrar, el receptor debe tener al menos un nivel R1 o superior comprado.
   // - Si el referido compra un nivel superior al receptor,
   //   la comisión se calcula solo hasta el nivel máximo comprado por el receptor.
+  // - Si el referido sube de rango, la comisión se calcula solo sobre
+  //   la diferencia entre el nuevo plan comisionable y su mayor plan anterior.
+  //   Ejemplo: R1 -> R2 = 80 - 30 = 50 USDT de base comisionable.
+  // - Recompras del mismo nivel o compras menores no generan nueva comisión.
 
   const purchasedLevel = Number(options.purchasedLevel || 0);
   if (purchasedLevel < 1) return;
