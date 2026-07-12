@@ -3,8 +3,6 @@ const { isProfileComplete } = require('./profileService');
 const { assertNoPlanRewardBalanceCap } = require('./noPlanBalanceCapService');
 
 const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
-const PASANTIA_START_DATE = '2026-07-07';
-
 const PASANTIA_CHECKIN_REWARD = 0.2;
 const PASANTIA_MAX_CHECKINS = 5;
 const PLAN_MAX_WEEKLY_CHECKINS = 5;
@@ -181,7 +179,7 @@ async function getUserBonusContext(userId, clientOrPool = pool) {
   const activeLevel = Number(activePurchase?.level || 0);
   const isTrial = activeLevel < 1;
   const registrationPeru = formatShiftedDate(new Date(user.created_at));
-  const canUseTrialBonuses = isTrial && registrationPeru >= PASANTIA_START_DATE;
+  const canUseTrialBonuses = isTrial;
 
   const accountCountResult = await clientOrPool.query(
     `SELECT COUNT(*)::int AS total FROM user_withdrawal_accounts WHERE user_id = $1`,
@@ -460,7 +458,6 @@ async function getBonusStatus(userId, clientOrPool = pool) {
       countedReferrals: qualifiedTrialInvites,
       tiers: trialTaskTiers,
       rules: [
-        'Solo aplica para cuentas creadas desde el 7 de julio de 2026 en adelante.',
         'Disponible únicamente sin nivel o en pasantía.',
         'Se cuentan referidos directos válidos con datos personales completos, cuenta de retiro y habilitación del gerente.',
       ],
