@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import {
   FiArrowLeft,
   FiBookOpen,
+  FiCheckCircle,
+  FiClock,
   FiChevronRight,
   FiCreditCard,
   FiGift,
@@ -135,6 +137,7 @@ export default function Profile() {
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const [redeemCode, setRedeemCode] = useState("");
   const [redeeming, setRedeeming] = useState(false);
+  const [redeemStatus, setRedeemStatus] = useState(null);
   const [roulette, setRoulette] = useState({ points: 0, prizes: [], history: [] });
   const [rouletteSpinning, setRouletteSpinning] = useState(false);
   const [roulettePrize, setRoulettePrize] = useState(null);
@@ -181,11 +184,34 @@ export default function Profile() {
     }
   };
 
+  const loadRedeemStatus = async () => {
+    try {
+      const { data } = await api.get("/auth/redeem-code/status");
+      setRedeemStatus(data);
+    } catch (_) {
+      setRedeemStatus(null);
+    }
+  };
+
   useEffect(() => {
     loadProfile();
     loadVip();
     loadRoulette();
+    loadRedeemStatus();
   }, []);
+
+  useEffect(() => {
+    if (section === "redeem") loadRedeemStatus();
+  }, [section]);
+
+  useEffect(() => {
+    if (section !== "redeem" || (!error && !message)) return undefined;
+    const timer = setTimeout(() => {
+      setError("");
+      setMessage("");
+    }, 3800);
+    return () => clearTimeout(timer);
+  }, [section, error, message]);
 
   const clearStatus = () => { setError(""); setMessage(""); };
   const goSection = (next) => { clearStatus(); setSection(next); window.scrollTo({ top: 0, behavior: "smooth" }); };
@@ -245,7 +271,9 @@ export default function Profile() {
       const { data } = await api.post("/auth/redeem-code", { code: clean });
       setRedeemCode("");
       setMessage(data.message || "Código canjeado correctamente.");
+      if (data.redeemDailyStatus) setRedeemStatus(data.redeemDailyStatus);
       await loadProfile();
+      await loadRedeemStatus();
     } catch (err) {
       setError(err.message || "No se pudo canjear el código.");
     } finally {
@@ -442,57 +470,129 @@ export default function Profile() {
     );
   };
 
-  const renderRedeem = () => (
-    <>
-      <SectionHeader title="Canjear código" subtitle="Ingresa tu código para aplicar un beneficio disponible." onBack={() => goSection("main")} />
-      <section className="profile-redeem-panel profile-redeem-section">
-        <div className="profile-redeem-head">
-          <RoyalIcon src={regaloIcon} alt="Código" />
-          <div>
-            <span className="eyebrow">Código</span>
-            <h3>Aplicar beneficio</h3>
-          </div>
-        </div>
-        <form className="profile-redeem-form" onSubmit={submitRedeemCode}>
-          <input
-            value={redeemCode}
-            onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
-            placeholder="Ingresa tu código"
-            maxLength={40}
-          />
-          <button className="primary-btn" disabled={redeeming}>{redeeming ? "Validando..." : "Canjear"}</button>
-        </form>
-      </section>
+  const renderRedeem = () => {
+    const dailyLimit = Number(redeemStatus?.dailyLimit || 0);
+    const usedToday = Number(redeemStatus?.usedToday || 0);
+    const remainingToday = redeemStatus?.remainingToday == null
+      ? null
+      : Number(redeemStatus.remainingToday || 0);
+    const usagePercent = dailyLimit > 0
+      ? Math.max(0, Math.min(100, Math.round((usedToday / dailyLimit) * 100)))
+      : 0;
+    const levelLabel = Number(redeemStatus?.activeLevel || 0) >= 1
+      ? `R${Number(redeemStatus.activeLevel)}`
+      : "Pasantía";
 
-      <section className="panel-card profile-section-card redeem-history-panel">
-        <div className="section-title">
-          <span>Historial</span>
-          <h3>Bonos canjeados</h3>
-        </div>
-        {redeemHistory.length === 0 ? (
-          <div className="empty-soft">Aún no has canjeado bonos.</div>
-        ) : (
-          <div className="redeem-history-list">
-            {redeemHistory.map((item) => (
-              <article className="redeem-history-item" key={item.id}>
-                <div className="redeem-history-icon">
-                  <img src={dolarIcon} alt="Bono" />
-                </div>
-                <div className="redeem-history-copy">
-                  <strong>{item.code}</strong>
-                  <small>{redeemBalanceTypeLabel(item.balanceType)} · {new Date(item.createdAt).toLocaleDateString("es-PE")}</small>
-                </div>
-                <div className="redeem-history-amount">
-                  <strong>+{Number(item.amountUsdt || 0).toFixed(2)} USDT</strong>
-                  <span>Reclamado</span>
-                </div>
-              </article>
-            ))}
+    return (
+      <>
+        <div className="redeem-mobile-header">
+          <button type="button" className="redeem-back-button" onClick={() => goSection("main")} aria-label="Volver">
+            <FiArrowLeft />
+          </button>
+          <div>
+            <span>Beneficios</span>
+            <h2>Canjear código</h2>
+            <p>Ingresa un código válido y recibe tu recompensa.</p>
           </div>
-        )}
-      </section>
-    </>
-  );
+        </div>
+
+        <section className="redeem-mobile-card">
+          <div className="redeem-card-heading">
+            <div className="redeem-heading-lockup">
+              <RoyalIcon src={regaloIcon} alt="Código" />
+              <div>
+                <span>Código promocional</span>
+                <h3>Aplicar beneficio</h3>
+              </div>
+            </div>
+            {dailyLimit > 0 && (
+              <span className={`redeem-quota-badge ${redeemStatus?.reachedLimit ? "full" : ""}`}>
+                {usedToday}/{dailyLimit} hoy
+              </span>
+            )}
+          </div>
+
+          {redeemStatus?.isActive && dailyLimit > 0 && (
+            <div className="redeem-daily-card">
+              <div className="redeem-daily-top">
+                <div>
+                  <span>Disponibles hoy</span>
+                  <strong>{Math.max(0, remainingToday ?? 0)} código{Math.max(0, remainingToday ?? 0) === 1 ? "" : "s"}</strong>
+                </div>
+                <div className="redeem-level-pill">Nivel {levelLabel}</div>
+              </div>
+              <div className="redeem-usage-line">
+                <span>Uso diario</span>
+                <strong>{usedToday} de {dailyLimit}</strong>
+              </div>
+              <div className="redeem-usage-track" aria-label={`Uso diario ${usedToday} de ${dailyLimit}`}>
+                <i style={{ width: `${usagePercent}%` }} />
+              </div>
+              <div className="redeem-reset-note">
+                <FiClock />
+                <span>Se reinicia a las 00:00 GMT-5</span>
+              </div>
+            </div>
+          )}
+
+          <form className="profile-redeem-form redeem-mobile-form" onSubmit={submitRedeemCode}>
+            <label htmlFor="redeem-code-input">Código</label>
+            <input
+              id="redeem-code-input"
+              value={redeemCode}
+              onChange={(e) => setRedeemCode(e.target.value.toUpperCase().replace(/\s+/g, ""))}
+              placeholder="Ejemplo: ROYAL2026"
+              maxLength={40}
+              autoComplete="off"
+              inputMode="text"
+              disabled={redeeming || Boolean(redeemStatus?.reachedLimit)}
+            />
+            <button className="primary-btn redeem-submit-button" disabled={redeeming || Boolean(redeemStatus?.reachedLimit)}>
+              {redeeming ? "Validando..." : redeemStatus?.reachedLimit ? "Límite diario alcanzado" : "Canjear código"}
+            </button>
+          </form>
+        </section>
+
+        <section className="redeem-history-mobile-card">
+          <div className="redeem-history-mobile-head">
+            <div>
+              <span>Historial</span>
+              <h3>Bonos canjeados</h3>
+            </div>
+            <strong>{redeemHistory.length}</strong>
+          </div>
+
+          {redeemHistory.length === 0 ? (
+            <div className="redeem-empty-mobile">
+              <FiGift />
+              <strong>Aún no tienes bonos canjeados</strong>
+              <span>Tus recompensas aparecerán aquí.</span>
+            </div>
+          ) : (
+            <div className="redeem-history-mobile-list">
+              {redeemHistory.map((item) => (
+                <article className="redeem-history-mobile-item" key={item.id}>
+                  <div className="redeem-history-icon">
+                    <img src={dolarIcon} alt="Bono" />
+                  </div>
+                  <div className="redeem-history-mobile-copy">
+                    <strong>{item.code}</strong>
+                    <span>{new Date(item.createdAt).toLocaleDateString("es-PE")}</span>
+                    <small>{redeemBalanceTypeLabel(item.balanceType)}</small>
+                  </div>
+                  <div className="redeem-history-mobile-value">
+                    <strong>+{Number(item.amountUsdt || 0).toFixed(2)}</strong>
+                    <span>USDT</span>
+                    <small><FiCheckCircle /> Aplicado</small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </>
+    );
+  };
 
   const renderPersonal = () => (
     <>
@@ -551,9 +651,10 @@ export default function Profile() {
   );
 
   return (
-    <div className="page-stack profile-page">
-      {error && <div className="alert error">{error}</div>}
-      {message && <div className="alert success">{message}</div>}
+    <div className={`page-stack profile-page profile-section-${section}`}>
+      {section === "redeem" && (error || message) && <div className="redeem-black-toast">{error || message}</div>}
+      {section !== "redeem" && error && <div className="alert error">{error}</div>}
+      {section !== "redeem" && message && <div className="alert success">{message}</div>}
       {section === "main" && renderMain()}
       {section === "redeem" && renderRedeem()}
       {section === "roulette" && renderRoulette()}

@@ -11,6 +11,8 @@ import iconHistorial from "../assets/icons/royal/historial.png";
 import iconEquipo from "../assets/icons/royal/equipo.png";
 import iconWhatsapp from "../assets/icons/royal/whatsapp.png";
 import iconAdmin from "../assets/icons/royal/admin.png";
+import iconBonusCheckin from "../assets/icons/royal/checkin-calendar.png";
+import iconBonusTasks from "../assets/icons/royal/weekly-fire-cup.png";
 
 const mainNavItems = [
   { to: "/home", label: "Inicio", icon: <FiGrid /> },
@@ -166,6 +168,18 @@ export default function AppShell({ children }) {
         </header>
         <div className="content-area">{children}</div>
       </main>
+      <div className="bonus-floating-shortcuts" aria-label="Bonos rápidos">
+        {!location.pathname.startsWith('/bonus/checkin') && (
+          <button type="button" className="bonus-float-btn" onClick={() => navigate('/bonus/checkin')} title="Check-in diario">
+            <img src={iconBonusCheckin} alt="Check-in" />
+          </button>
+        )}
+        {!location.pathname.startsWith('/bonus/tasks') && (
+          <button type="button" className="bonus-float-btn" onClick={() => navigate('/bonus/tasks')} title="Tareas">
+            <img src={iconBonusTasks} alt="Tareas" />
+          </button>
+        )}
+      </div>
       <nav className="mobile-nav mobile-nav-compact" aria-label="Navegación móvil">
         <NavLink to="/home" className={({ isActive }) => isActive ? "active" : ""}>
           <FiGrid /><span>Inicio</span>

@@ -1215,6 +1215,28 @@ function RedeemCodesAdminPanel() {
     expiresAt: "",
     note: "",
   });
+  const [limitConfig, setLimitConfig] = useState({
+    isActive: true,
+    standardDailyLimit: 1,
+    premiumDailyLimit: 3,
+    premiumFromLevel: 3,
+  });
+  const [savingLimits, setSavingLimits] = useState(false);
+
+  const loadLimitConfig = useCallback(async () => {
+    try {
+      const res = await api.get("/admin/redeem-codes/daily-limit-config");
+      const config = res.data.config || {};
+      setLimitConfig({
+        isActive: config.isActive !== false,
+        standardDailyLimit: Number(config.standardDailyLimit || 1),
+        premiumDailyLimit: Number(config.premiumDailyLimit || 3),
+        premiumFromLevel: Number(config.premiumFromLevel || 3),
+      });
+    } catch (err) {
+      setError(err.message);
+    }
+  }, []);
 
   const load = useCallback(async (page = pagination.page) => {
     setLoading(true);
@@ -1231,7 +1253,23 @@ function RedeemCodesAdminPanel() {
     }
   }, [pagination.page, search]);
 
-  useEffect(() => { load(1).catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(1).catch(() => {}); loadLimitConfig().catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveLimitConfig = async (e) => {
+    e.preventDefault();
+    setMessage("");
+    setError("");
+    setSavingLimits(true);
+    try {
+      const res = await api.patch("/admin/redeem-codes/daily-limit-config", limitConfig);
+      setLimitConfig(res.data.config || limitConfig);
+      setMessage(res.data.message || "Límites diarios actualizados.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSavingLimits(false);
+    }
+  };
 
   const createCode = async (e) => {
     e.preventDefault();
@@ -1273,6 +1311,68 @@ function RedeemCodesAdminPanel() {
     <div className="page-stack">
       {error && <div className="alert error">{error}</div>}
       {message && <div className="alert success">{message}</div>}
+
+      <form className="panel-card form-stack admin-redeem-limit-panel" onSubmit={saveLimitConfig}>
+        <div className="section-title">
+          <span>Control diario</span>
+          <h3>Límite de códigos por nivel</h3>
+        </div>
+        <div className="form-grid-2 redeem-limit-grid">
+          <label>
+            Pasantía, R1 y R2
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={limitConfig.standardDailyLimit}
+              onChange={(e)=>setLimitConfig({...limitConfig, standardDailyLimit:Number(e.target.value)})}
+            />
+            <small>Códigos permitidos por día</small>
+          </label>
+          <label>
+            R{limitConfig.premiumFromLevel} en adelante
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={limitConfig.premiumDailyLimit}
+              onChange={(e)=>setLimitConfig({...limitConfig, premiumDailyLimit:Number(e.target.value)})}
+            />
+            <small>Códigos permitidos por día</small>
+          </label>
+        </div>
+        <div className="form-grid-2 redeem-limit-grid secondary-row">
+          <label>
+            Nivel que inicia el límite superior
+            <select
+              value={limitConfig.premiumFromLevel}
+              onChange={(e)=>setLimitConfig({...limitConfig, premiumFromLevel:Number(e.target.value)})}
+            >
+              {[1,2,3,4,5,6,7,8].map((level)=><option key={level} value={level}>R{level}</option>)}
+            </select>
+          </label>
+          <label>
+            Estado del límite diario
+            <select
+              value={limitConfig.isActive ? "true" : "false"}
+              onChange={(e)=>setLimitConfig({...limitConfig, isActive:e.target.value === "true"})}
+            >
+              <option value="true">Activo</option>
+              <option value="false">Desactivado</option>
+            </select>
+          </label>
+        </div>
+        <div className="redeem-limit-summary">
+          <strong>Configuración actual:</strong>
+          <span>Pasantía hasta R{Math.max(0, Number(limitConfig.premiumFromLevel || 3) - 1)}: {limitConfig.standardDailyLimit} código(s) al día.</span>
+          <span>R{limitConfig.premiumFromLevel} en adelante: {limitConfig.premiumDailyLimit} código(s) al día.</span>
+          <span>Reinicio diario: 00:00 GMT-5.</span>
+        </div>
+        <button className="primary-btn" type="submit" disabled={savingLimits}>
+          {savingLimits ? "Guardando..." : "Guardar límites diarios"}
+        </button>
+      </form>
+
       <div className="two-columns admin-two">
         <form className="panel-card form-stack admin-redeem-form" onSubmit={createCode}>
           <div className="section-title"><span>Nuevo código</span><h3>Crear código de canje</h3></div>
@@ -1287,7 +1387,7 @@ function RedeemCodesAdminPanel() {
           </div>
           <label>Nota interna<input value={form.note} onChange={(e)=>setForm({...form,note:e.target.value})} placeholder="Motivo o campaña" /></label>
           <button className="primary-btn"><FiPlus /> Crear código</button>
-          <p className="muted-text small">Cada usuario solo podrá usar el mismo código una vez.</p>
+          <p className="muted-text small">Cada usuario solo puede usar el mismo código una vez. Además, se aplica el límite diario configurado por nivel.</p>
         </form>
 
         <section className="panel-card">
