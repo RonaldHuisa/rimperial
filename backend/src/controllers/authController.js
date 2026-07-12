@@ -703,7 +703,7 @@ async function redeemCode(req, res) {
 
         // Bloquea la cuenta para impedir que solicitudes simultáneas superen el límite diario.
         const userLock = await client.query(
-            `SELECT id FROM users WHERE id = $1 FOR UPDATE`,
+            `SELECT id, COALESCE(recharge_balance_usdt,0)::numeric AS recharge_balance_usdt FROM users WHERE id = $1 FOR UPDATE`,
             [userId]
         );
 
@@ -776,6 +776,33 @@ async function redeemCode(req, res) {
         }
 
         const balanceType = String(code.balance_type || "").toLowerCase();
+
+        if (
+            balanceType === "recharge" &&
+            dailyStatus.activeLevel < 1 &&
+            limitConfig.noPlanGuaranteeCapActive
+        ) {
+            const currentGuarantee = Number(userLock.rows[0]?.recharge_balance_usdt || 0);
+            const guaranteeCap = Number(limitConfig.noPlanGuaranteeCapUsdt || 10);
+            const resultingGuarantee = Number((currentGuarantee + amount).toFixed(2));
+
+            if (currentGuarantee >= guaranteeCap || resultingGuarantee > guaranteeCap) {
+                await client.query("ROLLBACK");
+
+                const message = currentGuarantee >= guaranteeCap
+                    ? `Alcanzaste el límite de ${guaranteeCap.toFixed(2)} USDT en saldo de garantía para cuentas sin plan activo. Activa un plan para seguir canjeando códigos de garantía.`
+                    : `Este código elevaría tu saldo de garantía a ${resultingGuarantee.toFixed(2)} USDT y superaría el límite de ${guaranteeCap.toFixed(2)} USDT para cuentas sin plan activo.`;
+
+                return res.status(400).json({
+                    message,
+                    guaranteeCapReached: true,
+                    currentGuaranteeBalance: Number(currentGuarantee.toFixed(2)),
+                    guaranteeCapUsdt: Number(guaranteeCap.toFixed(2)),
+                    activeLevel: dailyStatus.activeLevel,
+                });
+            }
+        }
+
         if (balanceType === "recharge") {
             await client.query(
                 `

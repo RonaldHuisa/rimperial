@@ -6,6 +6,8 @@ const DEFAULT_CONFIG = {
   standardDailyLimit: 1,
   premiumDailyLimit: 3,
   premiumFromLevel: 3,
+  noPlanGuaranteeCapActive: true,
+  noPlanGuaranteeCapUsdt: 10,
   timezone: REDEEM_TIMEZONE,
 };
 
@@ -22,6 +24,10 @@ function normalizeConfig(row = {}) {
     standardDailyLimit: toPositiveInt(row.standard_daily_limit, DEFAULT_CONFIG.standardDailyLimit),
     premiumDailyLimit: toPositiveInt(row.premium_daily_limit, DEFAULT_CONFIG.premiumDailyLimit),
     premiumFromLevel: toPositiveInt(row.premium_from_level, DEFAULT_CONFIG.premiumFromLevel),
+    noPlanGuaranteeCapActive: row.no_plan_guarantee_cap_active ?? DEFAULT_CONFIG.noPlanGuaranteeCapActive,
+    noPlanGuaranteeCapUsdt: Number.isFinite(Number(row.no_plan_guarantee_cap_usdt))
+      ? Number(row.no_plan_guarantee_cap_usdt)
+      : DEFAULT_CONFIG.noPlanGuaranteeCapUsdt,
     timezone: row.timezone || DEFAULT_CONFIG.timezone,
     updatedAt: row.updated_at || null,
   };
@@ -37,6 +43,8 @@ async function ensureRedeemCodeLimitSchema() {
           standard_daily_limit INTEGER NOT NULL DEFAULT 1 CHECK (standard_daily_limit > 0),
           premium_daily_limit INTEGER NOT NULL DEFAULT 3 CHECK (premium_daily_limit > 0),
           premium_from_level INTEGER NOT NULL DEFAULT 3 CHECK (premium_from_level BETWEEN 1 AND 8),
+          no_plan_guarantee_cap_active BOOLEAN NOT NULL DEFAULT TRUE,
+          no_plan_guarantee_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 10 CHECK (no_plan_guarantee_cap_usdt > 0),
           timezone VARCHAR(80) NOT NULL DEFAULT 'America/Lima',
           updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
           updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -47,6 +55,16 @@ async function ensureRedeemCodeLimitSchema() {
         INSERT INTO redeem_daily_limit_config(id)
         VALUES (1)
         ON CONFLICT (id) DO NOTHING
+      `);
+
+      await pool.query(`
+        ALTER TABLE redeem_daily_limit_config
+        ADD COLUMN IF NOT EXISTS no_plan_guarantee_cap_active BOOLEAN NOT NULL DEFAULT TRUE
+      `);
+
+      await pool.query(`
+        ALTER TABLE redeem_daily_limit_config
+        ADD COLUMN IF NOT EXISTS no_plan_guarantee_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 10
       `);
 
       await pool.query(`
@@ -96,11 +114,17 @@ async function updateRedeemDailyLimitConfig(client, {
   standardDailyLimit,
   premiumDailyLimit,
   premiumFromLevel,
+  noPlanGuaranteeCapActive,
+  noPlanGuaranteeCapUsdt,
   updatedBy,
 }) {
   const standard = toPositiveInt(standardDailyLimit, DEFAULT_CONFIG.standardDailyLimit);
   const premium = toPositiveInt(premiumDailyLimit, DEFAULT_CONFIG.premiumDailyLimit);
   const fromLevel = toPositiveInt(premiumFromLevel, DEFAULT_CONFIG.premiumFromLevel);
+  const guaranteeCap = Number(noPlanGuaranteeCapUsdt);
+  const normalizedGuaranteeCap = Number.isFinite(guaranteeCap) && guaranteeCap > 0
+    ? Number(guaranteeCap.toFixed(2))
+    : DEFAULT_CONFIG.noPlanGuaranteeCapUsdt;
 
   const result = await client.query(
     `
@@ -110,13 +134,15 @@ async function updateRedeemDailyLimitConfig(client, {
       standard_daily_limit = $2,
       premium_daily_limit = $3,
       premium_from_level = $4,
-      timezone = $5,
-      updated_by = $6,
+      no_plan_guarantee_cap_active = $5,
+      no_plan_guarantee_cap_usdt = $6,
+      timezone = $7,
+      updated_by = $8,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = 1
     RETURNING *
     `,
-    [Boolean(isActive), standard, premium, fromLevel, REDEEM_TIMEZONE, updatedBy || null]
+    [Boolean(isActive), standard, premium, fromLevel, Boolean(noPlanGuaranteeCapActive), normalizedGuaranteeCap, REDEEM_TIMEZONE, updatedBy || null]
   );
 
   return normalizeConfig(result.rows[0] || {});
@@ -142,17 +168,26 @@ async function getUserRedeemDailyStatus(client, userId, config = null) {
   const resolvedConfig = config || await getRedeemDailyLimitConfig(client);
   const activeLevel = await getActivePlanLevel(client, userId);
 
-  const usageResult = await client.query(
-    `
-    SELECT COUNT(*)::int AS used_today
-    FROM redeem_code_redemptions
-    WHERE user_id = $1
-      AND redeemed_day = ((CURRENT_TIMESTAMP AT TIME ZONE $2)::date)
-    `,
-    [userId, REDEEM_TIMEZONE]
-  );
+  const [usageResult, balanceResult] = await Promise.all([
+    client.query(
+      `
+      SELECT COUNT(*)::int AS used_today
+      FROM redeem_code_redemptions
+      WHERE user_id = $1
+        AND redeemed_day = ((CURRENT_TIMESTAMP AT TIME ZONE $2)::date)
+      `,
+      [userId, REDEEM_TIMEZONE]
+    ),
+    client.query(
+      `SELECT COALESCE(recharge_balance_usdt,0)::numeric AS guarantee_balance FROM users WHERE id = $1 LIMIT 1`,
+      [userId]
+    ),
+  ]);
 
   const usedToday = Number(usageResult.rows[0]?.used_today || 0);
+  const currentGuaranteeBalance = Number(balanceResult.rows[0]?.guarantee_balance || 0);
+  const noPlanGuaranteeCapApplies = Boolean(resolvedConfig.noPlanGuaranteeCapActive && activeLevel < 1);
+  const noPlanGuaranteeCapUsdt = Number(resolvedConfig.noPlanGuaranteeCapUsdt || DEFAULT_CONFIG.noPlanGuaranteeCapUsdt);
   const dailyLimit = activeLevel >= resolvedConfig.premiumFromLevel
     ? resolvedConfig.premiumDailyLimit
     : resolvedConfig.standardDailyLimit;
@@ -166,6 +201,14 @@ async function getUserRedeemDailyStatus(client, userId, config = null) {
     reachedLimit: Boolean(resolvedConfig.isActive && usedToday >= dailyLimit),
     timezone: resolvedConfig.timezone || REDEEM_TIMEZONE,
     resetAt: getNextRedeemResetAt(),
+    noPlanGuaranteeCapActive: Boolean(resolvedConfig.noPlanGuaranteeCapActive),
+    noPlanGuaranteeCapApplies,
+    noPlanGuaranteeCapUsdt,
+    currentGuaranteeBalance,
+    remainingGuaranteeCapacity: noPlanGuaranteeCapApplies
+      ? Math.max(0, Number((noPlanGuaranteeCapUsdt - currentGuaranteeBalance).toFixed(2)))
+      : null,
+    guaranteeCapReached: Boolean(noPlanGuaranteeCapApplies && currentGuaranteeBalance >= noPlanGuaranteeCapUsdt),
   };
 }
 
