@@ -170,12 +170,12 @@ export default function AppShell({ children }) {
       </main>
       <div className="bonus-floating-shortcuts" aria-label="Bonos rápidos">
         {!location.pathname.startsWith('/bonus/checkin') && (
-          <button type="button" className="bonus-float-btn" onClick={() => navigate('/bonus/checkin')} title="Check-in diario">
+          <button type="button" className="bonus-float-btn" onClick={() => navigate('/bonus/checkin')} title="Abrir check-in">
             <img src={iconBonusCheckin} alt="Check-in" />
           </button>
         )}
         {!location.pathname.startsWith('/bonus/tasks') && (
-          <button type="button" className="bonus-float-btn" onClick={() => navigate('/bonus/tasks')} title="Tareas">
+          <button type="button" className="bonus-float-btn" onClick={() => navigate('/bonus/tasks')} title="Abrir tareas semanales">
             <img src={iconBonusTasks} alt="Tareas" />
           </button>
         )}
