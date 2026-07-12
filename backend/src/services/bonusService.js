@@ -3,6 +3,11 @@ const { isProfileComplete } = require('./profileService');
 const { assertNoPlanRewardBalanceCap } = require('./noPlanBalanceCapService');
 
 const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
+// Ventana especial de lanzamiento: domingo 12/07/2026 desde las 12:00 GMT-5
+// hasta el reinicio normal del lunes 13/07/2026 a las 00:00 GMT-5.
+const SPECIAL_WEEK_DAY_START_UTC = new Date('2026-07-12T05:00:00.000Z');
+const SPECIAL_REFERRAL_START_UTC = new Date('2026-07-12T17:00:00.000Z');
+const SPECIAL_WEEK_END_UTC = new Date('2026-07-13T05:00:00.000Z');
 const PASANTIA_CHECKIN_REWARD = 0.2;
 const PASANTIA_MAX_CHECKINS = 5;
 const PLAN_MAX_WEEKLY_CHECKINS = 5;
@@ -84,6 +89,25 @@ function getPeruDateParts(date = new Date()) {
 }
 
 function getWeekWindow(date = new Date()) {
+  const currentMs = date.getTime();
+
+  // El 12 de julio se abre una ventana corta de lanzamiento.
+  // El conteo de referidos empieza exactamente a las 12:00 GMT-5 y termina
+  // cuando inicia el lunes. Desde ese momento vuelve el ciclo normal semanal.
+  if (
+    currentMs >= SPECIAL_WEEK_DAY_START_UTC.getTime() &&
+    currentMs < SPECIAL_WEEK_END_UTC.getTime()
+  ) {
+    return {
+      startDate: '2026-07-12',
+      endDate: '2026-07-12',
+      startUtc: new Date(SPECIAL_REFERRAL_START_UTC),
+      endUtcExclusive: new Date(SPECIAL_WEEK_END_UTC),
+      resetAtUtc: new Date(SPECIAL_WEEK_END_UTC),
+      isLaunchPartialWeek: true,
+    };
+  }
+
   const shifted = getShiftedPeruDate(date);
   const weekday = shifted.getUTCDay(); // 0 sun, 1 mon
   const diffToMonday = (weekday + 6) % 7;
@@ -103,7 +127,14 @@ function getWeekWindow(date = new Date()) {
   const endUtcExclusive = new Date(nextStartShifted.getTime() + PERU_OFFSET_MS);
   const resetAtUtc = endUtcExclusive;
 
-  return { startDate, endDate, startUtc, endUtcExclusive, resetAtUtc };
+  return {
+    startDate,
+    endDate,
+    startUtc,
+    endUtcExclusive,
+    resetAtUtc,
+    isLaunchPartialWeek: false,
+  };
 }
 
 async function ensureBonusSchema(clientOrPool = pool) {
@@ -289,34 +320,27 @@ async function countQualifiedPlanReferralsForWeek(userId, weekWindow, clientOrPo
     SELECT COUNT(*)::int AS total
     FROM users u
     WHERE u.referred_by_id = $1
+      -- Solo cuenta personas invitadas dentro del periodo semanal vigente.
+      -- En la ventana especial del 12/07, empieza a las 12:00 GMT-5.
+      AND u.created_at >= ($2::timestamptz AT TIME ZONE current_setting('TIMEZONE'))
+      AND u.created_at < ($3::timestamptz AT TIME ZONE current_setting('TIMEZONE'))
       AND COALESCE(u.withdraw_enabled, false) = true
       AND COALESCE(NULLIF(TRIM(u.full_name), ''), '') <> ''
       AND COALESCE(NULLIF(TRIM(u.phone_country_code), ''), '') <> ''
       AND CHAR_LENGTH(COALESCE(TRIM(u.phone_number), '')) >= 6
       AND EXISTS (
-        SELECT 1 FROM user_withdrawal_accounts uwa WHERE uwa.user_id = u.id LIMIT 1
+        SELECT 1
+        FROM user_withdrawal_accounts uwa
+        WHERE uwa.user_id = u.id
+        LIMIT 1
       )
       AND EXISTS (
         SELECT 1
-        FROM (
-          SELECT d.created_at AS activity_at
-          FROM deposits d
-          WHERE d.user_id = u.id AND d.status IN ('confirmed','completed','success')
-          UNION ALL
-          SELECT al.created_at AS activity_at
-          FROM account_ledger al
-          WHERE al.user_id = u.id
-            AND al.direction = 'credit'
-            AND al.balance_type IN ('recharge', 'investment')
-            AND al.type IN ('manual_recharge', 'manual_investment', 'deposit', 'deposit_confirmed')
-          UNION ALL
-          SELECT vp.purchased_at AS activity_at
-          FROM vip_purchases vp
-          WHERE vp.user_id = u.id
-            AND vp.level >= 1
-            AND vp.status IN ('active','expired','completed','cancelled','replaced')
-        ) activity
-        WHERE activity.activity_at >= $2 AND activity.activity_at < $3
+        FROM vip_purchases vp
+        WHERE vp.user_id = u.id
+          AND vp.level >= 1
+          AND vp.status = 'active'
+          AND vp.expires_at > NOW()
         LIMIT 1
       )
     `,
@@ -447,9 +471,11 @@ async function getBonusStatus(userId, clientOrPool = pool) {
       tiers: planTaskTiers,
       rules: [
         'Solo aplica para usuarios con plan activo R1 o superior.',
-        'El conteo reinicia cada lunes 00:00 GMT-5 y cierra cada domingo 23:59 GMT-5.',
-        'Se cuentan referidos directos válidos con recarga o compra válida dentro de la semana.',
-        'Para validar un referido se requiere cuenta completa, cuenta de retiro y habilitación del gerente.',
+        ...(weekWindow.isLaunchPartialWeek
+          ? ['Esta semana especial cuenta personas invitadas desde el 12 de julio a las 12:00 GMT-5.']
+          : ['El conteo reinicia cada lunes 00:00 GMT-5 y cierra cada domingo 23:59 GMT-5.']),
+        'Solo cuentan referidos directos creados dentro del periodo semanal vigente.',
+        'Para validar un referido se requiere datos completos, cuenta de retiro, plan activo y habilitación del gerente.',
       ],
     } : {
       kind: 'trial_tasks',
