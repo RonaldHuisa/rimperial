@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FiArrowLeft,
@@ -142,6 +142,11 @@ export default function Profile() {
   const [rouletteSpinning, setRouletteSpinning] = useState(false);
   const [roulettePrize, setRoulettePrize] = useState(null);
   const [rouletteRotation, setRouletteRotation] = useState(0);
+  const [rouletteWaiting, setRouletteWaiting] = useState(false);
+  const [rouletteMotion, setRouletteMotion] = useState({ id: 0, from: 0, to: 0 });
+  const [rouletteLandedPrizeId, setRouletteLandedPrizeId] = useState(null);
+  const [rouletteLandedLabel, setRouletteLandedLabel] = useState("");
+  const rouletteRotationRef = useRef(0);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -288,22 +293,41 @@ export default function Profile() {
       setError("No tienes giros disponibles.");
       return;
     }
+
     setRouletteSpinning(true);
+    setRouletteWaiting(true);
     setRoulettePrize(null);
+    setRouletteLandedPrizeId(null);
+    setRouletteLandedLabel("");
+
     try {
       const { data } = await api.post("/auth/roulette/spin");
       const prize = data.prize;
       const prizes = data.prizes || roulette.prizes;
       const list = roulette.prizes.length ? roulette.prizes : prizes;
-      const index = Math.max(0, list.findIndex((item) => Number(item.id) === Number(prize?.id)));
+      const matchedIndex = list.findIndex((item) => Number(item.id) === Number(prize?.id));
+      const index = Math.max(0, matchedIndex);
+      const matchedPrize = matchedIndex >= 0 ? list[matchedIndex] : prize;
       const slice = list.length ? 360 / list.length : 45;
       const target = 360 - (index * slice + slice / 2);
-      setRouletteRotation((prev) => {
-        const current = ((prev % 360) + 360) % 360;
-        const correction = ((target - current) + 360) % 360;
-        return prev + 1440 + correction;
+
+      const previousRotation = Number(rouletteRotationRef.current || 0);
+      const currentNormalized = ((previousRotation % 360) + 360) % 360;
+      const correction = ((target - currentNormalized) + 360) % 360;
+      const finalRotation = previousRotation + 1440 + correction;
+
+      rouletteRotationRef.current = finalRotation;
+      setRouletteWaiting(false);
+      setRouletteRotation(finalRotation);
+      setRouletteMotion({
+        id: Date.now(),
+        from: previousRotation,
+        to: finalRotation,
       });
-      setTimeout(() => {
+
+      window.setTimeout(() => {
+        setRouletteLandedPrizeId(prize?.id ?? null);
+        setRouletteLandedLabel(matchedPrize?.label || prize?.label || "Premio");
         setRoulettePrize(prize);
         setRoulette({
           points: Number(data.points || 0),
@@ -311,8 +335,9 @@ export default function Profile() {
           history: data.history || [],
         });
         setRouletteSpinning(false);
-      }, 2300);
+      }, 2650);
     } catch (err) {
+      setRouletteWaiting(false);
       setError(err.response?.data?.message || err.message || "No se pudo girar.");
       setRouletteSpinning(false);
     }
@@ -378,7 +403,13 @@ export default function Profile() {
 
   const renderRoulette = () => {
     const prizes = roulette.prizes || [];
-    const wheelStyle = { transform: `rotate(${rouletteRotation}deg)` };
+    const finalSpinActive = rouletteSpinning && !rouletteWaiting && rouletteMotion.id > 0;
+    const wheelStyle = finalSpinActive
+      ? {
+          "--roulette-from": `${rouletteMotion.from}deg`,
+          "--roulette-to": `${rouletteMotion.to}deg`,
+        }
+      : { transform: `rotate(${rouletteRotation}deg)` };
     const segmentAngle = prizes.length ? 360 / prizes.length : 360;
     const segmentColors = ["wheel-gold", "wheel-violet", "wheel-cream", "wheel-lavender"];
 
@@ -396,8 +427,14 @@ export default function Profile() {
           <div className="roulette-stage">
             <div className="roulette-pointer" />
             <div className="royal-wheel-shell">
-              <div className={`royal-wheel royal-wheel-svg ${rouletteSpinning ? "spinning" : ""}`}>
-                <svg className="royal-wheel-rotor" viewBox="0 0 240 240" style={wheelStyle} aria-label="Ruleta Royal">
+              <div className={`royal-wheel royal-wheel-svg ${rouletteWaiting ? "roulette-waiting" : ""}`}>
+                <svg
+                  key={`roulette-motion-${rouletteMotion.id}`}
+                  className={`royal-wheel-rotor ${finalSpinActive ? "roulette-rotating" : ""}`}
+                  viewBox="0 0 240 240"
+                  style={wheelStyle}
+                  aria-label="Ruleta Royal"
+                >
                   <circle className="wheel-outer-ring" cx="120" cy="120" r="112" />
                   {prizes.map((prize, index) => {
                     const start = index * segmentAngle;
@@ -405,7 +442,7 @@ export default function Profile() {
                     const mid = start + segmentAngle / 2;
                     const textPoint = polarToCartesian(120, 120, 75, mid);
                     return (
-                      <g className="wheel-segment" key={prize.id}>
+                      <g className={`wheel-segment ${Number(rouletteLandedPrizeId) === Number(prize.id) ? "winner" : ""}`} key={prize.id}>
                         <path
                           className={segmentColors[index % segmentColors.length]}
                           d={describeArc(120, 120, 106, 39, start, end)}
@@ -435,6 +472,12 @@ export default function Profile() {
                 <div className="royal-wheel-center">RI</div>
               </div>
             </div>
+            {rouletteLandedLabel && !rouletteSpinning && (
+              <div className="roulette-landed-result" role="status" aria-live="polite">
+                <span>Cayó en</span>
+                <strong>{rouletteLandedLabel}</strong>
+              </div>
+            )}
             <p className="roulette-stage-note">Cada giro consume 1 punto. El premio se acredita automáticamente.</p>
           </div>
         </section>

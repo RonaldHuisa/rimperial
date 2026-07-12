@@ -20152,3 +20152,372 @@ b,
     text-align: left;
   }
 }
+
+/* ===== Bonos: modo oscuro móvil corregido ===== */
+:root[data-theme="dark"] .bonus-clean-page {
+  color: #f5f2ff;
+}
+
+:root[data-theme="dark"] .bonus-section-panel,
+:root[data-theme="dark"] .bonus-section-panel.bonus-checkin-only,
+:root[data-theme="dark"] .bonus-section-panel.bonus-tasks-only {
+  background: #171326 !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme="dark"] .bonus-simple-title h3,
+:root[data-theme="dark"] .tasks-title-lockup h3,
+:root[data-theme="dark"] .clean-tier-title,
+:root[data-theme="dark"] .premium-rules-head > strong,
+:root[data-theme="dark"] .premium-rules-grid article strong,
+:root[data-theme="dark"] .bonus-clean-box strong,
+:root[data-theme="dark"] .checkin-progress-header strong,
+:root[data-theme="dark"] .tasks-summary-item strong,
+:root[data-theme="dark"] .clean-reset-card strong {
+  color: #f7f4ff !important;
+}
+
+:root[data-theme="dark"] .bonus-section-eyebrow,
+:root[data-theme="dark"] .clean-tier-kicker {
+  color: #a693ff !important;
+}
+
+:root[data-theme="dark"] .bonus-clean-box,
+:root[data-theme="dark"] .tasks-clean-summary,
+:root[data-theme="dark"] .tasks-summary-item,
+:root[data-theme="dark"] .clean-tier-card,
+:root[data-theme="dark"] .premium-rules-panel,
+:root[data-theme="dark"] .premium-rules-grid article,
+:root[data-theme="dark"] .clean-reset-card {
+  background: #1d1830 !important;
+  border-color: rgba(166, 147, 255, 0.16) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme="dark"] .bonus-clean-box span,
+:root[data-theme="dark"] .bonus-clean-box small,
+:root[data-theme="dark"] .checkin-progress-header span,
+:root[data-theme="dark"] .checkin-week-step small,
+:root[data-theme="dark"] .tasks-summary-item span,
+:root[data-theme="dark"] .tasks-summary-item small,
+:root[data-theme="dark"] .clean-tier-progress-text,
+:root[data-theme="dark"] .premium-rules-grid article span,
+:root[data-theme="dark"] .premium-rules-panel > p,
+:root[data-theme="dark"] .clean-reset-top span {
+  color: #aaa2c4 !important;
+}
+
+:root[data-theme="dark"] .bonus-clean-status {
+  background: #221c36 !important;
+  border-color: rgba(166, 147, 255, 0.18) !important;
+  color: #d8d0f5 !important;
+}
+
+:root[data-theme="dark"] .bonus-clean-status.ready {
+  background: rgba(52, 168, 99, 0.14) !important;
+  border-color: rgba(75, 201, 126, 0.24) !important;
+  color: #79d89e !important;
+}
+
+:root[data-theme="dark"] .checkin-week-step {
+  background: #1d1830 !important;
+  border-color: rgba(166, 147, 255, 0.14) !important;
+}
+
+:root[data-theme="dark"] .checkin-step-mark {
+  background: #292143 !important;
+  color: #b9aaff !important;
+}
+
+:root[data-theme="dark"] .checkin-week-step.done {
+  background: rgba(45, 155, 91, 0.12) !important;
+  border-color: rgba(71, 194, 120, 0.28) !important;
+}
+
+:root[data-theme="dark"] .checkin-week-step.done .checkin-step-mark {
+  background: #2f9f61 !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .bonus-checkin-only .bonus-clean-button,
+:root[data-theme="dark"] .clean-claim-button {
+  background: #765de8 !important;
+  border-color: #765de8 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme="dark"] .bonus-checkin-only .bonus-clean-button:disabled,
+:root[data-theme="dark"] .clean-claim-button:disabled {
+  background: #2a2440 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #948ca9 !important;
+  opacity: 1 !important;
+}
+
+:root[data-theme="dark"] .tasks-reset-card {
+  background: #211b36 !important;
+}
+
+:root[data-theme="dark"] .tasks-summary-item.referrals {
+  border-right-color: rgba(166, 147, 255, 0.12) !important;
+}
+
+:root[data-theme="dark"] .tasks-summary-item.referrals strong,
+:root[data-theme="dark"] .clean-tier-percent {
+  color: #a693ff !important;
+}
+
+:root[data-theme="dark"] .reward-mini-chip,
+:root[data-theme="dark"] .premium-tier-card .reward-mini-chip,
+:root[data-theme="dark"] .clean-rewards-right .reward-mini-chip {
+  background: #24203a !important;
+  border-color: rgba(166, 147, 255, 0.15) !important;
+  color: #f1edff !important;
+}
+
+:root[data-theme="dark"] .task-progress-bar.subtle.thin {
+  background: #302943 !important;
+}
+
+:root[data-theme="dark"] .clean-tier-card.is-complete {
+  background: #192a22 !important;
+  border-color: rgba(60, 180, 109, 0.35) !important;
+}
+
+:root[data-theme="dark"] .clean-tier-card.is-complete .task-progress-bar.subtle.thin {
+  background: rgba(48, 174, 100, 0.18) !important;
+}
+
+:root[data-theme="dark"] .clean-tier-card.is-complete .clean-tier-percent,
+:root[data-theme="dark"] .clean-tier-card.is-claimed .clean-tier-percent {
+  color: #65d28f !important;
+}
+
+:root[data-theme="dark"] .clean-tier-card.is-claimed .clean-claim-button.done {
+  background: rgba(50, 164, 95, 0.13) !important;
+  border-color: rgba(82, 202, 130, 0.24) !important;
+  color: #77d99d !important;
+}
+
+:root[data-theme="dark"] .premium-rules-grid article > svg {
+  color: #a693ff !important;
+}
+
+:root[data-theme="dark"] .mobile-nav {
+  background: #171326 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+@media (max-width: 760px) {
+  :root[data-theme="dark"] .tasks-premium-v8 .tasks-clean-summary,
+  :root[data-theme="dark"] .tasks-premium-v8 .clean-tier-card {
+    background: #1d1830 !important;
+  }
+
+  :root[data-theme="dark"] .bonus-checkin-only .bonus-simple-grid.two-cols.compact {
+    background: transparent !important;
+  }
+}
+
+/* v1.1.05 — Corrección final de solapamiento en encabezado de tareas móviles */
+@media (max-width: 760px) {
+  .tasks-premium-v8 .tasks-clean-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 104px !important;
+    align-items: center !important;
+    column-gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .tasks-premium-v8 .tasks-title-lockup.compact {
+    display: grid !important;
+    grid-template-columns: 36px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 7px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .tasks-premium-v8 .tasks-title-lockup.compact > img {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .tasks-premium-v8 .tasks-title-lockup.compact > div {
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .tasks-premium-v8 .tasks-title-lockup.compact .bonus-section-eyebrow {
+    display: block !important;
+    font-size: .59rem !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .tasks-premium-v8 .tasks-title-lockup.compact h3 {
+    margin: 2px 0 0 !important;
+    max-width: 100% !important;
+    font-size: .88rem !important;
+    line-height: 1.15 !important;
+    font-weight: 700 !important;
+    letter-spacing: -.01em !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    overflow: hidden !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+  }
+
+  .tasks-premium-v8 .clean-reset-card {
+    width: 104px !important;
+    min-width: 104px !important;
+    max-width: 104px !important;
+    padding: 8px 6px !important;
+    justify-self: end !important;
+    box-sizing: border-box !important;
+  }
+
+  .tasks-premium-v8 .clean-reset-top {
+    gap: 4px !important;
+    font-size: .64rem !important;
+  }
+
+  .tasks-premium-v8 .clean-reset-card strong {
+    font-size: .86rem !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .tasks-premium-v8 .tasks-clean-header {
+    grid-template-columns: minmax(0, 1fr) 96px !important;
+    column-gap: 6px !important;
+  }
+
+  .tasks-premium-v8 .tasks-title-lockup.compact {
+    grid-template-columns: 32px minmax(0, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  .tasks-premium-v8 .tasks-title-lockup.compact > img {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .tasks-premium-v8 .tasks-title-lockup.compact h3 {
+    font-size: .82rem !important;
+  }
+
+  .tasks-premium-v8 .clean-reset-card {
+    width: 96px !important;
+    min-width: 96px !important;
+    max-width: 96px !important;
+  }
+}
+
+/* v1.1.02 — Animación robusta de Ruleta Royal */
+@keyframes roulette-waiting-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes roulette-prize-spin {
+  from { transform: rotate(var(--roulette-from)); }
+  to { transform: rotate(var(--roulette-to)); }
+}
+
+.royal-wheel-svg.roulette-waiting {
+  animation: roulette-waiting-spin .72s linear infinite;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+.royal-wheel-rotor {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  -webkit-transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform;
+}
+
+.royal-wheel-rotor.roulette-rotating {
+  animation: roulette-prize-spin 2.6s cubic-bezier(.12,.76,.16,1) forwards;
+  transition: none !important;
+}
+
+.roulette-spin-btn:disabled {
+  cursor: not-allowed;
+}
+
+/* v1.1.03 — Ruleta: animación forzada dentro del Perfil y premio visible */
+.profile-page .royal-wheel-svg.roulette-waiting {
+  animation: roulette-waiting-spin .72s linear infinite !important;
+  transform-origin: 50% 50% !important;
+  will-change: transform !important;
+}
+
+.profile-page .royal-wheel-rotor.roulette-rotating {
+  animation: roulette-prize-spin 2.8s cubic-bezier(.12,.76,.16,1) forwards !important;
+  transform-origin: 50% 50% !important;
+  -webkit-transform-origin: 50% 50% !important;
+  transform-box: fill-box !important;
+  will-change: transform !important;
+}
+
+.profile-page .wheel-segment.winner path {
+  stroke: #35a861 !important;
+  stroke-width: 4 !important;
+}
+
+.roulette-landed-result {
+  width: min(280px, 92%);
+  margin: 12px auto 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(53, 168, 97, .28);
+  border-radius: 12px;
+  background: rgba(53, 168, 97, .08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.roulette-landed-result span {
+  color: var(--muted, #727a98);
+  font-size: .84rem;
+}
+
+.roulette-landed-result strong {
+  color: #2f8d54;
+  font-size: .98rem;
+}
+
+[data-theme="dark"] .roulette-landed-result {
+  background: rgba(53, 168, 97, .12);
+  border-color: rgba(93, 211, 133, .28);
+}
+
+[data-theme="dark"] .roulette-landed-result strong {
+  color: #73d99a;
+}
+
+@media (max-width: 760px) {
+  .profile-page .royal-wheel-rotor.roulette-rotating {
+    animation-duration: 2.8s !important;
+  }
+
+  .roulette-landed-result {
+    width: 94%;
+    padding: 9px 12px;
+  }
+}
