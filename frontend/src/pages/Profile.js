@@ -534,6 +534,15 @@ export default function Profile() {
               </div>
             </div>
           )}
+          {redeemStatus?.noPlanGuaranteeCapApplies && (
+            <div className={`redeem-guarantee-cap-note ${redeemStatus?.guaranteeCapReached ? "full" : ""}`}>
+              <div>
+                <span>Límite de garantía por códigos</span>
+                <strong>{Number(redeemStatus.currentGuaranteeBalance || 0).toFixed(2)} / {Number(redeemStatus.noPlanGuaranteeCapUsdt || 10).toFixed(2)} USDT</strong>
+              </div>
+              <small>{redeemStatus?.guaranteeCapReached ? "Activa un plan para seguir canjeando códigos de garantía." : `Disponible: ${Number(redeemStatus.remainingGuaranteeCapacity || 0).toFixed(2)} USDT`}</small>
+            </div>
+          )}
 
           <form className="profile-redeem-form redeem-mobile-form" onSubmit={submitRedeemCode}>
             <label htmlFor="redeem-code-input">Código</label>

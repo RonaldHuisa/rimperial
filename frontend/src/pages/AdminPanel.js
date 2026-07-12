@@ -1220,6 +1220,8 @@ function RedeemCodesAdminPanel() {
     standardDailyLimit: 1,
     premiumDailyLimit: 3,
     premiumFromLevel: 3,
+    noPlanGuaranteeCapActive: true,
+    noPlanGuaranteeCapUsdt: 10,
   });
   const [savingLimits, setSavingLimits] = useState(false);
 
@@ -1232,6 +1234,8 @@ function RedeemCodesAdminPanel() {
         standardDailyLimit: Number(config.standardDailyLimit || 1),
         premiumDailyLimit: Number(config.premiumDailyLimit || 3),
         premiumFromLevel: Number(config.premiumFromLevel || 3),
+        noPlanGuaranteeCapActive: config.noPlanGuaranteeCapActive !== false,
+        noPlanGuaranteeCapUsdt: Number(config.noPlanGuaranteeCapUsdt || 10),
       });
     } catch (err) {
       setError(err.message);
@@ -1362,11 +1366,36 @@ function RedeemCodesAdminPanel() {
             </select>
           </label>
         </div>
+        <div className="form-grid-2 redeem-limit-grid secondary-row">
+          <label>
+            Tope de garantía sin plan
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              max="100000"
+              value={limitConfig.noPlanGuaranteeCapUsdt}
+              onChange={(e)=>setLimitConfig({...limitConfig, noPlanGuaranteeCapUsdt:Number(e.target.value)})}
+            />
+            <small>Máximo en saldo de garantía por códigos para Pasantía o sin plan</small>
+          </label>
+          <label>
+            Estado del tope de garantía
+            <select
+              value={limitConfig.noPlanGuaranteeCapActive ? "true" : "false"}
+              onChange={(e)=>setLimitConfig({...limitConfig, noPlanGuaranteeCapActive:e.target.value === "true"})}
+            >
+              <option value="true">Activo</option>
+              <option value="false">Desactivado</option>
+            </select>
+          </label>
+        </div>
         <div className="redeem-limit-summary">
           <strong>Configuración actual:</strong>
           <span>Pasantía hasta R{Math.max(0, Number(limitConfig.premiumFromLevel || 3) - 1)}: {limitConfig.standardDailyLimit} código(s) al día.</span>
           <span>R{limitConfig.premiumFromLevel} en adelante: {limitConfig.premiumDailyLimit} código(s) al día.</span>
           <span>Reinicio diario: 00:00 GMT-5.</span>
+          <span>Sin plan o Pasantía: máximo {Number(limitConfig.noPlanGuaranteeCapUsdt || 10).toFixed(2)} USDT en garantía mediante códigos.</span>
         </div>
         <button className="primary-btn" type="submit" disabled={savingLimits}>
           {savingLimits ? "Guardando..." : "Guardar límites diarios"}

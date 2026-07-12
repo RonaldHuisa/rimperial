@@ -19748,3 +19748,49 @@ b,
     font-size: 0.66rem;
   }
 }
+
+/* v1.0.99 — Tope de garantía por códigos para cuentas sin plan */
+.redeem-guarantee-cap-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(122, 103, 230, 0.14);
+  border-radius: 12px;
+  background: rgba(122, 103, 230, 0.04);
+}
+
+.redeem-guarantee-cap-note > div {
+  display: grid;
+  gap: 2px;
+}
+
+.redeem-guarantee-cap-note span,
+.redeem-guarantee-cap-note small {
+  color: var(--text-soft, #727a98);
+  font-size: 0.82rem;
+}
+
+.redeem-guarantee-cap-note strong {
+  color: var(--text, #27304f);
+  font-size: 0.95rem;
+}
+
+.redeem-guarantee-cap-note.full {
+  border-color: rgba(190, 77, 88, 0.18);
+  background: rgba(190, 77, 88, 0.05);
+}
+
+.redeem-guarantee-cap-note.full strong,
+.redeem-guarantee-cap-note.full small {
+  color: #a63d4d;
+}
+
+@media (max-width: 760px) {
+  .redeem-guarantee-cap-note {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
