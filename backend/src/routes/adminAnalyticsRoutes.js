@@ -22,6 +22,8 @@ const {
   listAdminCreditPointUsers,
   getAdminCreditPointHistory,
   adjustAdminUserCreditPoints,
+  getAdminRedeemDailyLimitConfig,
+  patchAdminRedeemDailyLimitConfig,
   listAdminRedeemCodes,
   createAdminRedeemCode,
   updateAdminRedeemCode,
@@ -53,6 +55,8 @@ router.get("/roulette/prizes", listAdminRoulettePrizes);
 router.post("/roulette/prizes", createAdminRoulettePrize);
 router.patch("/roulette/prizes/:prizeId", updateAdminRoulettePrize);
 router.get("/roulette/spins", listAdminRouletteSpins);
+router.get("/redeem-codes/daily-limit-config", getAdminRedeemDailyLimitConfig);
+router.patch("/redeem-codes/daily-limit-config", patchAdminRedeemDailyLimitConfig);
 router.get("/redeem-codes", listAdminRedeemCodes);
 router.post("/redeem-codes", createAdminRedeemCode);
 router.patch("/redeem-codes/:codeId", updateAdminRedeemCode);

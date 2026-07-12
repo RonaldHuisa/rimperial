@@ -15,8 +15,10 @@ const referralRoutes = require("./routes/referralRoutes");
 const vipRoutes = require("./routes/vipRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const prelaunchRoutes = require("./routes/prelaunchRoutes");
+const bonusRoutes = require("./routes/bonusRoutes");
 const alchemyWebhookRoutes = require("./routes/alchemyWebhookRoutes");
 const { startAutomaticDepositScanner } = require("./services/depositScannerService");
+const { ensureRedeemCodeLimitSchema } = require("./services/redeemCodeLimitService");
 const { apiRateLimiter } = require("./middleware/rateLimitMiddleware");
 
 const app = express();
@@ -103,6 +105,7 @@ app.use("/api/referrals", referralRoutes);
 app.use("/api/vip", vipRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/prelaunch", prelaunchRoutes);
+app.use("/api/bonus", bonusRoutes);
 app.use("/api/webhooks/alchemy", alchemyWebhookRoutes);
 
 
@@ -119,6 +122,9 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Royal Imperial AI backend corriendo en http://localhost:${PORT}`);
+  ensureRedeemCodeLimitSchema()
+    .then(() => console.log("Límites diarios de códigos preparados."))
+    .catch((error) => console.error("REDEEM LIMIT STARTUP ERROR:", error));
   startAutomaticDepositScanner();
   console.log("Escaneo automático de recargas activo. Recolección manual desde admin si está configurada.");
 });

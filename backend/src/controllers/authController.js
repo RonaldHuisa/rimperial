@@ -6,6 +6,7 @@ const { normalizePhone, normalizeCountryCode, getUserProfileBundle, validateWith
 const { ensureRouletteSchema, normalizePrize, normalizeSpin, pickPrize } = require("../services/rouletteService");
 const { addAlchemyAddressToNetworkWebhooks } = require("../services/alchemyWebhookService");
 const { ensureCreditPointsSchema, awardCreditPointMilestone, adjustCreditPoints } = require("../services/creditPointsService");
+const { ensureRedeemCodeLimitSchema, getRedeemDailyLimitConfig, getUserRedeemDailyStatus, buildDailyLimitMessage, REDEEM_TIMEZONE } = require("../services/redeemCodeLimitService");
 
 const { generateUniqueReferralCode } = require("../utils/referralUtil");
 const { getClientIp, ensureSecuritySchema, captureRegisterIp, captureLoginIp, ensureIpCanRegister, logSecurityEvent } = require("../services/securityService");
@@ -662,6 +663,25 @@ async function changePassword(req, res) {
     }
 }
 
+
+async function getRedeemCodeStatus(req, res) {
+    const userId = req.user.userId;
+    try {
+        await ensureRedeemCodeLimitSchema();
+        const client = await pool.connect();
+        try {
+            const config = await getRedeemDailyLimitConfig(client);
+            const status = await getUserRedeemDailyStatus(client, userId, config);
+            return res.json(status);
+        } finally {
+            client.release();
+        }
+    } catch (error) {
+        console.error("REDEEM STATUS ERROR:", error);
+        return res.status(500).json({ message: "No se pudo obtener el estado de canje." });
+    }
+}
+
 async function redeemCode(req, res) {
     const userId = req.user.userId;
     const rawCode = String(req.body?.code || "").trim().toUpperCase();
@@ -670,9 +690,42 @@ async function redeemCode(req, res) {
         return res.status(400).json({ message: "Ingresa un código válido." });
     }
 
+    try {
+        await ensureRedeemCodeLimitSchema();
+    } catch (error) {
+        console.error("REDEEM LIMIT SCHEMA ERROR:", error);
+        return res.status(500).json({ message: "No se pudo preparar el sistema de límites de códigos." });
+    }
+
     const client = await pool.connect();
     try {
         await client.query("BEGIN");
+
+        // Bloquea la cuenta para impedir que solicitudes simultáneas superen el límite diario.
+        const userLock = await client.query(
+            `SELECT id FROM users WHERE id = $1 FOR UPDATE`,
+            [userId]
+        );
+
+        if (!userLock.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ message: "Usuario no encontrado." });
+        }
+
+        const limitConfig = await getRedeemDailyLimitConfig(client);
+        const dailyStatus = await getUserRedeemDailyStatus(client, userId, limitConfig);
+
+        if (dailyStatus.reachedLimit) {
+            await client.query("ROLLBACK");
+            return res.status(429).json({
+                message: buildDailyLimitMessage(dailyStatus),
+                dailyLimit: dailyStatus.dailyLimit,
+                usedToday: dailyStatus.usedToday,
+                remainingToday: 0,
+                activeLevel: dailyStatus.activeLevel,
+                resetTimezone: "GMT-5",
+            });
+        }
 
         const codeResult = await client.query(
             `
@@ -752,11 +805,23 @@ async function redeemCode(req, res) {
 
         const redemption = await client.query(
             `
-            INSERT INTO redeem_code_redemptions(code_id, user_id, balance_type, amount_usdt)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO redeem_code_redemptions(
+              code_id,
+              user_id,
+              balance_type,
+              amount_usdt,
+              redeemed_day
+            )
+            VALUES (
+              $1,
+              $2,
+              $3,
+              $4,
+              ((CURRENT_TIMESTAMP AT TIME ZONE $5)::date)
+            )
             RETURNING id
             `,
-            [code.id, userId, balanceType, amount]
+            [code.id, userId, balanceType, amount, REDEEM_TIMEZONE]
         );
 
         await client.query(
@@ -785,6 +850,8 @@ async function redeemCode(req, res) {
             ]
         );
 
+        const updatedDailyStatus = await getUserRedeemDailyStatus(client, userId, limitConfig);
+
         await client.query("COMMIT");
 
         const bundle = await getUserProfileBundle(userId);
@@ -792,6 +859,7 @@ async function redeemCode(req, res) {
             message: "Código canjeado correctamente.",
             amountUsdt: amount,
             balanceType,
+            redeemDailyStatus: updatedDailyStatus,
             ...bundle,
         });
     } catch (error) {
@@ -945,6 +1013,7 @@ module.exports = {
     saveWithdrawalAccount,
     deleteWithdrawalAccount,
   redeemCode,
+  getRedeemCodeStatus,
   getRouletteStatus,
   spinRoulette,
 };

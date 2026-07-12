@@ -1,0 +1,201 @@
+const pool = require('../config/db');
+
+const REDEEM_TIMEZONE = 'America/Lima';
+const DEFAULT_CONFIG = {
+  isActive: true,
+  standardDailyLimit: 1,
+  premiumDailyLimit: 3,
+  premiumFromLevel: 3,
+  timezone: REDEEM_TIMEZONE,
+};
+
+let ensurePromise = null;
+
+function toPositiveInt(value, fallback) {
+  const parsed = Math.floor(Number(value));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function normalizeConfig(row = {}) {
+  return {
+    isActive: row.is_active ?? DEFAULT_CONFIG.isActive,
+    standardDailyLimit: toPositiveInt(row.standard_daily_limit, DEFAULT_CONFIG.standardDailyLimit),
+    premiumDailyLimit: toPositiveInt(row.premium_daily_limit, DEFAULT_CONFIG.premiumDailyLimit),
+    premiumFromLevel: toPositiveInt(row.premium_from_level, DEFAULT_CONFIG.premiumFromLevel),
+    timezone: row.timezone || DEFAULT_CONFIG.timezone,
+    updatedAt: row.updated_at || null,
+  };
+}
+
+async function ensureRedeemCodeLimitSchema() {
+  if (!ensurePromise) {
+    ensurePromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS redeem_daily_limit_config (
+          id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+          is_active BOOLEAN NOT NULL DEFAULT TRUE,
+          standard_daily_limit INTEGER NOT NULL DEFAULT 1 CHECK (standard_daily_limit > 0),
+          premium_daily_limit INTEGER NOT NULL DEFAULT 3 CHECK (premium_daily_limit > 0),
+          premium_from_level INTEGER NOT NULL DEFAULT 3 CHECK (premium_from_level BETWEEN 1 AND 8),
+          timezone VARCHAR(80) NOT NULL DEFAULT 'America/Lima',
+          updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      await pool.query(`
+        INSERT INTO redeem_daily_limit_config(id)
+        VALUES (1)
+        ON CONFLICT (id) DO NOTHING
+      `);
+
+      await pool.query(`
+        ALTER TABLE redeem_code_redemptions
+        ADD COLUMN IF NOT EXISTS redeemed_day DATE
+      `);
+
+      await pool.query(`
+        UPDATE redeem_code_redemptions
+        SET redeemed_day = ((created_at AT TIME ZONE 'UTC') AT TIME ZONE '${REDEEM_TIMEZONE}')::date
+        WHERE redeemed_day IS NULL
+      `);
+
+      await pool.query(`
+        ALTER TABLE redeem_code_redemptions
+        ALTER COLUMN redeemed_day SET DEFAULT ((CURRENT_TIMESTAMP AT TIME ZONE '${REDEEM_TIMEZONE}')::date)
+      `);
+
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_redeem_redemptions_user_day
+        ON redeem_code_redemptions(user_id, redeemed_day)
+      `);
+    })().catch((error) => {
+      ensurePromise = null;
+      throw error;
+    });
+  }
+
+  return ensurePromise;
+}
+
+async function getRedeemDailyLimitConfig(clientOrPool = pool, { forUpdate = false } = {}) {
+  const result = await clientOrPool.query(
+    `
+    SELECT *
+    FROM redeem_daily_limit_config
+    WHERE id = 1
+    ${forUpdate ? 'FOR UPDATE' : ''}
+    `
+  );
+
+  return normalizeConfig(result.rows[0] || {});
+}
+
+async function updateRedeemDailyLimitConfig(client, {
+  isActive,
+  standardDailyLimit,
+  premiumDailyLimit,
+  premiumFromLevel,
+  updatedBy,
+}) {
+  const standard = toPositiveInt(standardDailyLimit, DEFAULT_CONFIG.standardDailyLimit);
+  const premium = toPositiveInt(premiumDailyLimit, DEFAULT_CONFIG.premiumDailyLimit);
+  const fromLevel = toPositiveInt(premiumFromLevel, DEFAULT_CONFIG.premiumFromLevel);
+
+  const result = await client.query(
+    `
+    UPDATE redeem_daily_limit_config
+    SET
+      is_active = $1,
+      standard_daily_limit = $2,
+      premium_daily_limit = $3,
+      premium_from_level = $4,
+      timezone = $5,
+      updated_by = $6,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = 1
+    RETURNING *
+    `,
+    [Boolean(isActive), standard, premium, fromLevel, REDEEM_TIMEZONE, updatedBy || null]
+  );
+
+  return normalizeConfig(result.rows[0] || {});
+}
+
+async function getActivePlanLevel(client, userId) {
+  const result = await client.query(
+    `
+    SELECT COALESCE(MAX(level), 0)::int AS active_level
+    FROM vip_purchases
+    WHERE user_id = $1
+      AND level >= 1
+      AND status = 'active'
+      AND expires_at > NOW()
+    `,
+    [userId]
+  );
+
+  return Number(result.rows[0]?.active_level || 0);
+}
+
+async function getUserRedeemDailyStatus(client, userId, config = null) {
+  const resolvedConfig = config || await getRedeemDailyLimitConfig(client);
+  const activeLevel = await getActivePlanLevel(client, userId);
+
+  const usageResult = await client.query(
+    `
+    SELECT COUNT(*)::int AS used_today
+    FROM redeem_code_redemptions
+    WHERE user_id = $1
+      AND redeemed_day = ((CURRENT_TIMESTAMP AT TIME ZONE $2)::date)
+    `,
+    [userId, REDEEM_TIMEZONE]
+  );
+
+  const usedToday = Number(usageResult.rows[0]?.used_today || 0);
+  const dailyLimit = activeLevel >= resolvedConfig.premiumFromLevel
+    ? resolvedConfig.premiumDailyLimit
+    : resolvedConfig.standardDailyLimit;
+
+  return {
+    isActive: Boolean(resolvedConfig.isActive),
+    activeLevel,
+    dailyLimit,
+    usedToday,
+    remainingToday: resolvedConfig.isActive ? Math.max(0, dailyLimit - usedToday) : null,
+    reachedLimit: Boolean(resolvedConfig.isActive && usedToday >= dailyLimit),
+    timezone: resolvedConfig.timezone || REDEEM_TIMEZONE,
+    resetAt: getNextRedeemResetAt(),
+  };
+}
+
+
+function getNextRedeemResetAt() {
+  const peruOffsetMs = 5 * 60 * 60 * 1000;
+  const shifted = new Date(Date.now() - peruOffsetMs);
+  const nextShiftedMidnight = Date.UTC(
+    shifted.getUTCFullYear(),
+    shifted.getUTCMonth(),
+    shifted.getUTCDate() + 1,
+    0, 0, 0, 0
+  );
+  return new Date(nextShiftedMidnight + peruOffsetMs).toISOString();
+}
+
+function buildDailyLimitMessage(status) {
+  const limit = Number(status?.dailyLimit || 0);
+  const noun = limit === 1 ? 'código' : 'códigos';
+  return `Hoy ya alcanzaste tu límite de ${limit} ${noun}. Podrás canjear nuevamente después de las 00:00 GMT-5.`;
+}
+
+module.exports = {
+  REDEEM_TIMEZONE,
+  DEFAULT_CONFIG,
+  ensureRedeemCodeLimitSchema,
+  getRedeemDailyLimitConfig,
+  updateRedeemDailyLimitConfig,
+  getActivePlanLevel,
+  getUserRedeemDailyStatus,
+  buildDailyLimitMessage,
+  getNextRedeemResetAt,
+};

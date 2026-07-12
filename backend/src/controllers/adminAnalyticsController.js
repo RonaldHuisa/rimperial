@@ -2,6 +2,7 @@ const pool = require("../config/db");
 const { ensureRouletteSchema, normalizePrize, normalizeSpin } = require("../services/rouletteService");
 const { seedRoyalVipPackages } = require("../services/royalAiTaskService");
 const { ensureCreditPointsSchema, adjustCreditPoints, awardCreditPointMilestone, awardValidatedReferralCreditPoint } = require("../services/creditPointsService");
+const { ensureRedeemCodeLimitSchema, getRedeemDailyLimitConfig, updateRedeemDailyLimitConfig } = require("../services/redeemCodeLimitService");
 
 function money(value) {
   const n = Number(value || 0);
@@ -817,6 +818,62 @@ function normalizeRedeemCode(value) {
     .slice(0, 40);
 }
 
+async function getAdminRedeemDailyLimitConfig(req, res) {
+  try {
+    await ensureRedeemCodeLimitSchema();
+    const config = await getRedeemDailyLimitConfig(pool);
+    return res.json({ config });
+  } catch (error) {
+    console.error("GET ADMIN REDEEM DAILY LIMIT CONFIG ERROR:", error);
+    return res.status(500).json({ message: "Error al cargar límites diarios de códigos.", detail: error.message });
+  }
+}
+
+async function patchAdminRedeemDailyLimitConfig(req, res) {
+  const adminId = req.user.userId;
+  const isActive = req.body?.isActive ?? req.body?.is_active;
+  const standardDailyLimit = Number(req.body?.standardDailyLimit ?? req.body?.standard_daily_limit);
+  const premiumDailyLimit = Number(req.body?.premiumDailyLimit ?? req.body?.premium_daily_limit);
+  const premiumFromLevel = Number(req.body?.premiumFromLevel ?? req.body?.premium_from_level);
+
+  if (!Number.isInteger(standardDailyLimit) || standardDailyLimit < 1 || standardDailyLimit > 20) {
+    return res.status(400).json({ message: "El límite diario estándar debe estar entre 1 y 20." });
+  }
+
+  if (!Number.isInteger(premiumDailyLimit) || premiumDailyLimit < 1 || premiumDailyLimit > 20) {
+    return res.status(400).json({ message: "El límite diario premium debe estar entre 1 y 20." });
+  }
+
+  if (premiumDailyLimit < standardDailyLimit) {
+    return res.status(400).json({ message: "El límite premium no puede ser menor que el límite estándar." });
+  }
+
+  if (!Number.isInteger(premiumFromLevel) || premiumFromLevel < 1 || premiumFromLevel > 8) {
+    return res.status(400).json({ message: "El nivel premium debe estar entre R1 y R8." });
+  }
+
+  const client = await pool.connect();
+  try {
+    await ensureRedeemCodeLimitSchema();
+    await client.query("BEGIN");
+    const config = await updateRedeemDailyLimitConfig(client, {
+      isActive: Boolean(isActive),
+      standardDailyLimit,
+      premiumDailyLimit,
+      premiumFromLevel,
+      updatedBy: adminId,
+    });
+    await client.query("COMMIT");
+    return res.json({ message: "Límites diarios actualizados correctamente.", config });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("PATCH ADMIN REDEEM DAILY LIMIT CONFIG ERROR:", error);
+    return res.status(500).json({ message: "Error al actualizar límites diarios.", detail: error.message });
+  } finally {
+    client.release();
+  }
+}
+
 async function listAdminRedeemCodes(req, res) {
   try {
     const limit = getLimit(req.query.limit, 50, 200);
@@ -1300,6 +1357,8 @@ module.exports = {
   listAdminCreditPointUsers,
   getAdminCreditPointHistory,
   adjustAdminUserCreditPoints,
+  getAdminRedeemDailyLimitConfig,
+  patchAdminRedeemDailyLimitConfig,
   listAdminRedeemCodes,
   createAdminRedeemCode,
   updateAdminRedeemCode,
