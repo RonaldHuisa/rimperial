@@ -70,6 +70,11 @@ export default function Tasks() {
     const id = setTimeout(() => setToast(""), 1800);
     return () => clearTimeout(id);
   }, [toast]);
+  useEffect(() => {
+    if (!/límite de saldo/i.test(String(error || ""))) return undefined;
+    const id = setTimeout(() => setError(""), 2400);
+    return () => clearTimeout(id);
+  }, [error]);
 
   const submit = async () => {
     if (!selected || !question) return;
@@ -139,7 +144,9 @@ export default function Tasks() {
         </div>
       </section>
 
-      {error && <div className="alert error">{error}</div>}
+      {error && (/límite de saldo/i.test(String(error))
+        ? <div className="balance-cap-black-toast">{error}</div>
+        : <div className="alert error">{error}</div>)}
 
       <section className="task-layout task-layout-v2">
         <article className={`task-panel task-current-card ${(dashboard?.today?.remaining || 0) <= 0 ? "task-current-card-done" : ""}`}>

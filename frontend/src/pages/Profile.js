@@ -482,6 +482,12 @@ export default function Profile() {
     const levelLabel = Number(redeemStatus?.activeLevel || 0) >= 1
       ? `R${Number(redeemStatus.activeLevel)}`
       : "Pasantía";
+    const noPlanCapsApply = Boolean(redeemStatus && Number(redeemStatus.activeLevel || 0) < 1);
+    const bothNoPlanCapsReached = Boolean(
+      noPlanCapsApply &&
+      redeemStatus?.guaranteeCapReached &&
+      redeemStatus?.withdrawableCapReached
+    );
 
     return (
       <>
@@ -497,7 +503,7 @@ export default function Profile() {
         </div>
 
         <section className="redeem-mobile-card">
-          <div className="redeem-card-heading">
+          <div className="redeem-card-heading clean-redeem-heading">
             <div className="redeem-heading-lockup">
               <RoyalIcon src={regaloIcon} alt="Código" />
               <div>
@@ -512,38 +518,6 @@ export default function Profile() {
             )}
           </div>
 
-          {redeemStatus?.isActive && dailyLimit > 0 && (
-            <div className="redeem-daily-card">
-              <div className="redeem-daily-top">
-                <div>
-                  <span>Disponibles hoy</span>
-                  <strong>{Math.max(0, remainingToday ?? 0)} código{Math.max(0, remainingToday ?? 0) === 1 ? "" : "s"}</strong>
-                </div>
-                <div className="redeem-level-pill">Nivel {levelLabel}</div>
-              </div>
-              <div className="redeem-usage-line">
-                <span>Uso diario</span>
-                <strong>{usedToday} de {dailyLimit}</strong>
-              </div>
-              <div className="redeem-usage-track" aria-label={`Uso diario ${usedToday} de ${dailyLimit}`}>
-                <i style={{ width: `${usagePercent}%` }} />
-              </div>
-              <div className="redeem-reset-note">
-                <FiClock />
-                <span>Se reinicia a las 00:00 GMT-5</span>
-              </div>
-            </div>
-          )}
-          {redeemStatus?.noPlanGuaranteeCapApplies && (
-            <div className={`redeem-guarantee-cap-note ${redeemStatus?.guaranteeCapReached ? "full" : ""}`}>
-              <div>
-                <span>Límite de garantía por códigos</span>
-                <strong>{Number(redeemStatus.currentGuaranteeBalance || 0).toFixed(2)} / {Number(redeemStatus.noPlanGuaranteeCapUsdt || 10).toFixed(2)} USDT</strong>
-              </div>
-              <small>{redeemStatus?.guaranteeCapReached ? "Activa un plan para seguir canjeando códigos de garantía." : `Disponible: ${Number(redeemStatus.remainingGuaranteeCapacity || 0).toFixed(2)} USDT`}</small>
-            </div>
-          )}
-
           <form className="profile-redeem-form redeem-mobile-form" onSubmit={submitRedeemCode}>
             <label htmlFor="redeem-code-input">Código</label>
             <input
@@ -554,12 +528,44 @@ export default function Profile() {
               maxLength={40}
               autoComplete="off"
               inputMode="text"
-              disabled={redeeming || Boolean(redeemStatus?.reachedLimit)}
+              disabled={redeeming || Boolean(redeemStatus?.reachedLimit) || bothNoPlanCapsReached}
             />
-            <button className="primary-btn redeem-submit-button" disabled={redeeming || Boolean(redeemStatus?.reachedLimit)}>
-              {redeeming ? "Validando..." : redeemStatus?.reachedLimit ? "Límite diario alcanzado" : "Canjear código"}
+            <button className="primary-btn redeem-submit-button" disabled={redeeming || Boolean(redeemStatus?.reachedLimit) || bothNoPlanCapsReached}>
+              {redeeming ? "Validando..." : bothNoPlanCapsReached ? "Límites de saldo alcanzados" : redeemStatus?.reachedLimit ? "Límite diario alcanzado" : "Canjear código"}
             </button>
           </form>
+
+
+          {noPlanCapsApply && (
+            <div className="redeem-no-plan-limits compact-limits">
+              <div className="redeem-limits-title compact-title">
+                <span>Límites sin plan</span>
+                <small>Máximo 5 USDT por cada tipo de saldo.</small>
+              </div>
+
+              <div className="redeem-limit-grid-compact">
+                <div className={`redeem-limit-balance-row compact-row ${redeemStatus?.guaranteeCapReached ? "full" : ""}`}>
+                  <div>
+                    <span>Garantía</span>
+                    <strong>{Number(redeemStatus.currentGuaranteeBalance || 0).toFixed(2)} / {Number(redeemStatus.noPlanGuaranteeCapUsdt || 5).toFixed(2)}</strong>
+                    <small>{redeemStatus?.guaranteeCapReached ? "Límite alcanzado" : `Disponible ${Number(redeemStatus.remainingGuaranteeCapacity || 0).toFixed(2)}`}</small>
+                  </div>
+                </div>
+
+                <div className={`redeem-limit-balance-row compact-row ${redeemStatus?.withdrawableCapReached ? "full" : ""}`}>
+                  <div>
+                    <span>Retirable</span>
+                    <strong>{Number(redeemStatus.currentWithdrawableBalance || 0).toFixed(2)} / {Number(redeemStatus.noPlanWithdrawableCapUsdt || 5).toFixed(2)}</strong>
+                    <small>{redeemStatus?.withdrawableCapReached ? "Límite alcanzado" : `Disponible ${Number(redeemStatus.remainingWithdrawableCapacity || 0).toFixed(2)}`}</small>
+                  </div>
+                </div>
+              </div>
+
+              {(redeemStatus?.guaranteeCapReached || redeemStatus?.withdrawableCapReached) && (
+                <p>Activa un plan para continuar recibiendo recompensas.</p>
+              )}
+            </div>
+          )}
         </section>
 
         <section className="redeem-history-mobile-card">
@@ -661,8 +667,8 @@ export default function Profile() {
 
   return (
     <div className={`page-stack profile-page profile-section-${section}`}>
-      {section === "redeem" && (error || message) && <div className="redeem-black-toast">{error || message}</div>}
-      {section !== "redeem" && error && <div className="alert error">{error}</div>}
+      {(section === "redeem" || /límite de saldo/i.test(String(error || ""))) && (error || (section === "redeem" ? message : "")) && <div className="redeem-black-toast">{error || message}</div>}
+      {section !== "redeem" && error && !/límite de saldo/i.test(String(error || "")) && <div className="alert error">{error}</div>}
       {section !== "redeem" && message && <div className="alert success">{message}</div>}
       {section === "main" && renderMain()}
       {section === "redeem" && renderRedeem()}

@@ -19794,3 +19794,361 @@ b,
     gap: 4px;
   }
 }
+
+
+/* v1.1.00 — Canjear código móvil más limpio + tope 5 USDT */
+.clean-redeem-heading {
+  margin-bottom: 8px;
+}
+
+.redeem-daily-inline-card {
+  margin-top: 12px;
+  border: 1px solid var(--redeem-line);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fbfaff;
+  display: grid;
+  gap: 9px;
+}
+
+.redeem-inline-main {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.redeem-inline-item {
+  display: grid;
+  gap: 2px;
+}
+
+.redeem-inline-item span,
+.redeem-usage-line.compact span {
+  color: var(--redeem-muted);
+  font-size: .79rem;
+}
+
+.redeem-inline-item strong {
+  color: var(--redeem-text);
+  font-size: 1rem;
+  font-weight: 720;
+}
+
+.redeem-inline-item.align-end {
+  justify-items: end;
+  text-align: right;
+}
+
+.redeem-usage-line.compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.redeem-guarantee-cap-note.compact {
+  margin-top: 12px;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.redeem-guarantee-top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+@media (max-width: 760px) {
+  .clean-redeem-heading {
+    margin-bottom: 10px;
+  }
+
+  .profile-section-redeem .redeem-mobile-form {
+    gap: 9px !important;
+  }
+
+  .redeem-daily-inline-card {
+    padding: 11px 12px;
+  }
+
+  .redeem-guarantee-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+
+/* v1.1.01 — Límites visibles de garantía y retirable para Pasantía / sin nivel */
+.redeem-no-plan-limits {
+  margin-top: 12px;
+  border: 1px solid rgba(122,103,230,.15);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(122,103,230,.035);
+  display: grid;
+  gap: 10px;
+}
+
+.redeem-limits-title {
+  display: grid;
+  gap: 2px;
+}
+
+.redeem-limits-title > span {
+  color: var(--redeem-text, #27304f);
+  font-size: .9rem;
+  font-weight: 750;
+}
+
+.redeem-limits-title > small {
+  color: var(--redeem-muted, #707898);
+  font-size: .75rem;
+  line-height: 1.35;
+}
+
+.redeem-limit-balance-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 11px;
+  border: 1px solid rgba(122,103,230,.1);
+  border-radius: 11px;
+  background: #fff;
+}
+
+.redeem-limit-balance-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.redeem-limit-balance-row span {
+  color: var(--redeem-text, #27304f);
+  font-size: .84rem;
+  font-weight: 700;
+}
+
+.redeem-limit-balance-row small {
+  color: var(--redeem-muted, #707898);
+  font-size: .74rem;
+}
+
+.redeem-limit-balance-row > strong {
+  color: #705ce4;
+  font-size: .9rem;
+  white-space: nowrap;
+}
+
+.redeem-limit-balance-row.full {
+  border-color: rgba(190,77,88,.18);
+  background: rgba(190,77,88,.045);
+}
+
+.redeem-limit-balance-row.full > strong,
+.redeem-limit-balance-row.full small {
+  color: #a63d4d;
+}
+
+.redeem-no-plan-limits > p {
+  margin: 0;
+  color: #a63d4d;
+  font-size: .76rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 420px) {
+  .redeem-no-plan-limits {
+    padding: 11px;
+  }
+
+  .redeem-limit-balance-row {
+    padding: 9px 10px;
+  }
+
+  .redeem-limit-balance-row > strong {
+    font-size: .84rem;
+  }
+}
+
+/* v1.1.02 — Canje móvil alineado + límites compactos + popup de topes */
+.profile-section-redeem .redeem-card-heading,
+.profile-section-redeem .redeem-card-heading.clean-redeem-heading {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  width: 100%;
+}
+
+.profile-section-redeem .redeem-heading-lockup {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.profile-section-redeem .redeem-heading-lockup > div {
+  min-width: 0;
+}
+
+.profile-section-redeem .redeem-quota-badge {
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  max-width: max-content !important;
+  min-width: 62px !important;
+  flex: 0 0 auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  margin: 0 !important;
+}
+
+.profile-section-redeem .redeem-mobile-form {
+  margin-top: 2px;
+}
+
+.redeem-no-plan-limits.compact-limits {
+  margin-top: 10px;
+  padding: 10px;
+  gap: 8px;
+  border-radius: 13px;
+}
+
+.redeem-limits-title.compact-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.redeem-limits-title.compact-title > span {
+  font-size: .84rem;
+  white-space: nowrap;
+}
+
+.redeem-limits-title.compact-title > small {
+  font-size: .7rem;
+  text-align: right;
+}
+
+.redeem-limit-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.redeem-limit-balance-row.compact-row {
+  display: block;
+  padding: 9px 10px;
+  min-width: 0;
+}
+
+.redeem-limit-balance-row.compact-row > div {
+  display: grid;
+  gap: 2px;
+}
+
+.redeem-limit-balance-row.compact-row span {
+  font-size: .76rem;
+  font-weight: 650;
+}
+
+.redeem-limit-balance-row.compact-row strong {
+  color: #705ce4;
+  font-size: .9rem;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.redeem-limit-balance-row.compact-row small {
+  font-size: .68rem;
+  line-height: 1.2;
+}
+
+.redeem-limit-balance-row.compact-row.full strong,
+.redeem-limit-balance-row.compact-row.full small {
+  color: #a63d4d;
+}
+
+.redeem-no-plan-limits.compact-limits > p {
+  font-size: .71rem;
+  margin-top: 1px;
+}
+
+.balance-cap-black-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 190;
+  width: min(420px, calc(100vw - 28px));
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: rgba(16, 17, 21, .97);
+  color: #fff;
+  text-align: center;
+  font-size: .86rem;
+  font-weight: 500;
+  line-height: 1.35;
+  box-shadow: none;
+}
+
+@media (max-width: 420px) {
+  .profile-section-redeem .redeem-mobile-card {
+    padding: 13px !important;
+  }
+
+  .profile-section-redeem .redeem-card-heading,
+  .profile-section-redeem .redeem-card-heading.clean-redeem-heading {
+    align-items: center !important;
+  }
+
+  .profile-section-redeem .redeem-heading-lockup .profile-menu-icon-img {
+    width: 38px;
+    height: 38px;
+  }
+
+  .profile-section-redeem .redeem-heading-lockup h3 {
+    font-size: 1rem;
+  }
+
+  .profile-section-redeem .redeem-quota-badge {
+    min-width: 58px !important;
+    padding: 6px 8px !important;
+    font-size: .72rem !important;
+  }
+
+  .redeem-limits-title.compact-title {
+    align-items: flex-start;
+  }
+
+  .redeem-limits-title.compact-title > small {
+    max-width: 155px;
+  }
+
+  .redeem-limit-grid-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 350px) {
+  .redeem-limit-grid-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .redeem-limits-title.compact-title {
+    display: grid;
+  }
+
+  .redeem-limits-title.compact-title > small {
+    max-width: none;
+    text-align: left;
+  }
+}

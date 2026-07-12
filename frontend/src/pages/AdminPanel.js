@@ -1221,7 +1221,9 @@ function RedeemCodesAdminPanel() {
     premiumDailyLimit: 3,
     premiumFromLevel: 3,
     noPlanGuaranteeCapActive: true,
-    noPlanGuaranteeCapUsdt: 10,
+    noPlanGuaranteeCapUsdt: 5,
+    noPlanWithdrawableCapActive: true,
+    noPlanWithdrawableCapUsdt: 5,
   });
   const [savingLimits, setSavingLimits] = useState(false);
 
@@ -1235,7 +1237,9 @@ function RedeemCodesAdminPanel() {
         premiumDailyLimit: Number(config.premiumDailyLimit || 3),
         premiumFromLevel: Number(config.premiumFromLevel || 3),
         noPlanGuaranteeCapActive: config.noPlanGuaranteeCapActive !== false,
-        noPlanGuaranteeCapUsdt: Number(config.noPlanGuaranteeCapUsdt || 10),
+        noPlanGuaranteeCapUsdt: Number(config.noPlanGuaranteeCapUsdt || 5),
+        noPlanWithdrawableCapActive: config.noPlanWithdrawableCapActive !== false,
+        noPlanWithdrawableCapUsdt: Number(config.noPlanWithdrawableCapUsdt || 5),
       });
     } catch (err) {
       setError(err.message);
@@ -1390,12 +1394,37 @@ function RedeemCodesAdminPanel() {
             </select>
           </label>
         </div>
+        <div className="form-grid-2 redeem-limit-grid secondary-row">
+          <label>
+            Tope retirable sin plan
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              max="100000"
+              value={limitConfig.noPlanWithdrawableCapUsdt}
+              onChange={(e)=>setLimitConfig({...limitConfig, noPlanWithdrawableCapUsdt:Number(e.target.value)})}
+            />
+            <small>Máximo en saldo retirable por códigos para Pasantía o sin plan</small>
+          </label>
+          <label>
+            Estado del tope retirable
+            <select
+              value={limitConfig.noPlanWithdrawableCapActive ? "true" : "false"}
+              onChange={(e)=>setLimitConfig({...limitConfig, noPlanWithdrawableCapActive:e.target.value === "true"})}
+            >
+              <option value="true">Activo</option>
+              <option value="false">Desactivado</option>
+            </select>
+          </label>
+        </div>
         <div className="redeem-limit-summary">
           <strong>Configuración actual:</strong>
           <span>Pasantía hasta R{Math.max(0, Number(limitConfig.premiumFromLevel || 3) - 1)}: {limitConfig.standardDailyLimit} código(s) al día.</span>
           <span>R{limitConfig.premiumFromLevel} en adelante: {limitConfig.premiumDailyLimit} código(s) al día.</span>
           <span>Reinicio diario: 00:00 GMT-5.</span>
-          <span>Sin plan o Pasantía: máximo {Number(limitConfig.noPlanGuaranteeCapUsdt || 10).toFixed(2)} USDT en garantía mediante códigos.</span>
+          <span>Sin plan o Pasantía: máximo {Number(limitConfig.noPlanGuaranteeCapUsdt || 5).toFixed(2)} USDT en garantía mediante códigos.</span>
+          <span>Sin plan o Pasantía: máximo {Number(limitConfig.noPlanWithdrawableCapUsdt || 5).toFixed(2)} USDT retirables mediante códigos.</span>
         </div>
         <button className="primary-btn" type="submit" disabled={savingLimits}>
           {savingLimits ? "Guardando..." : "Guardar límites diarios"}
