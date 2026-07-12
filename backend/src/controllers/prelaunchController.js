@@ -5,6 +5,7 @@ const {
   getConfig,
   creditRechargeBalance,
 } = require("../services/prelaunchService");
+const { isNoPlanBalanceCapError } = require("../services/noPlanBalanceCapService");
 
 async function getStatus(req, res) {
   const userId = req.user.userId;
@@ -75,7 +76,7 @@ async function checkin(req, res) {
       return res.status(400).json({ message: "Ya completaste tu check-in de hoy." });
     }
 
-    await creditRechargeBalance(client, {
+    const creditResult = await creditRechargeBalance(client, {
       userId,
       amount,
       type: "prelaunch_checkin",
@@ -86,16 +87,25 @@ async function checkin(req, res) {
       metadata: { dayNumber, checkinDate: status.todayPeru },
     });
 
+    if (Number(creditResult.creditedAmount) !== Number(amount)) {
+      await client.query(`UPDATE prelaunch_checkins SET amount_usdt = $1 WHERE id = $2`, [creditResult.creditedAmount, result.rows[0].id]);
+    }
+
     const updated = await getPrelaunchStatus(userId, client, { refreshReferral: true });
     await client.query("COMMIT");
 
     return res.json({
-      message: `Check-in completado. +${amount.toFixed(2)} USDT en saldo de garantía.`,
-      rewardUsdt: amount,
+      message: creditResult.message || `Check-in completado. +${Number(creditResult.creditedAmount).toFixed(2)} USDT en saldo de garantía.`,
+      rewardUsdt: Number(creditResult.creditedAmount),
+      requestedRewardUsdt: amount,
+      partialCredit: Boolean(creditResult.partial),
       status: updated,
     });
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
+    if (isNoPlanBalanceCapError(error)) {
+      return res.status(400).json({ message: error.message, code: error.code });
+    }
     console.error("PRELAUNCH CHECKIN ERROR:", error);
     return res.status(500).json({ message: "Error al registrar check-in.", detail: error.message });
   } finally {
@@ -238,10 +248,12 @@ async function adminReviewTikTok(req, res) {
       [status, note, submissionId]
     );
 
+    let creditResult = null;
     if (status === "approved" && !approvedBefore.rows.length) {
-      await creditRechargeBalance(client, {
+      const requestedRewardUsdt = Number(submission.reward_usdt || 4);
+      creditResult = await creditRechargeBalance(client, {
         userId: submission.user_id,
-        amount: Number(submission.reward_usdt || 4),
+        amount: requestedRewardUsdt,
         type: "prelaunch_tiktok",
         title: "Bono pre-lanzamiento TikTok",
         description: "TikTok promocional aprobado por administrador.",
@@ -249,12 +261,22 @@ async function adminReviewTikTok(req, res) {
         referenceId: submissionId,
         metadata: { tiktokUrl: submission.tiktok_url },
       });
+      if (Number(creditResult.creditedAmount) !== requestedRewardUsdt) {
+        await client.query(`UPDATE prelaunch_tiktok_submissions SET reward_usdt = $1 WHERE id = $2`, [creditResult.creditedAmount, submissionId]);
+      }
     }
 
     await client.query("COMMIT");
-    return res.json({ message: status === "approved" ? "TikTok aprobado." : "TikTok rechazado." });
+    return res.json({
+      message: creditResult?.message || (status === "approved" ? "TikTok aprobado." : "TikTok rechazado."),
+      rewardUsdt: creditResult ? Number(creditResult.creditedAmount) : undefined,
+      partialCredit: Boolean(creditResult?.partial),
+    });
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
+    if (isNoPlanBalanceCapError(error)) {
+      return res.status(400).json({ message: error.message, code: error.code });
+    }
     console.error("ADMIN PRELAUNCH TIKTOK REVIEW ERROR:", error);
     return res.status(500).json({ message: "Error al revisar TikTok.", detail: error.message });
   } finally {

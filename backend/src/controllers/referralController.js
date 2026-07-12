@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const { assertNoPlanRewardBalanceCap, isNoPlanBalanceCapError } = require("../services/noPlanBalanceCapService");
 
 function maskEmail(email) {
   if (!email || !email.includes("@")) return "********";
@@ -130,12 +131,25 @@ async function claimReferralReward(req, res) {
     if (!tier.rows.length) { await client.query("ROLLBACK"); return res.status(404).json({ message: "Recompensa no encontrada." }); }
     const t = tier.rows[0];
     if (Number(direct.rows[0].total) < Number(t.required_invites)) { await client.query("ROLLBACK"); return res.status(400).json({ message: "Todavía no cumples el requisito." }); }
-    const claim = await client.query(`INSERT INTO user_referral_rewards(user_id,tier_id,reward_usdt) VALUES ($1,$2,$3) ON CONFLICT (user_id,tier_id) DO NOTHING RETURNING id`, [userId, t.id, t.reward_usdt]);
+    const requestedRewardUsdt = Number(t.reward_usdt || 0);
+    const capResult = await assertNoPlanRewardBalanceCap(client, {
+      userId,
+      balanceType: "withdrawable",
+      amount: requestedRewardUsdt,
+    });
+    const creditedRewardUsdt = Number(capResult.creditedAmount || requestedRewardUsdt);
+    const claim = await client.query(`INSERT INTO user_referral_rewards(user_id,tier_id,reward_usdt) VALUES ($1,$2,$3) ON CONFLICT (user_id,tier_id) DO NOTHING RETURNING id`, [userId, t.id, creditedRewardUsdt]);
     if (!claim.rows.length) { await client.query("ROLLBACK"); return res.status(409).json({ message: "Esta recompensa ya fue reclamada." }); }
-    await client.query(`UPDATE users SET withdrawable_usdt=COALESCE(withdrawable_usdt,0)+$1, earnings_balance_usdt=COALESCE(earnings_balance_usdt,0)+$1 WHERE id=$2`, [t.reward_usdt, userId]);
+    await client.query(`UPDATE users SET withdrawable_usdt=COALESCE(withdrawable_usdt,0)+$1, earnings_balance_usdt=COALESCE(earnings_balance_usdt,0)+$1 WHERE id=$2`, [creditedRewardUsdt, userId]);
     await client.query("COMMIT");
-    return res.json({ message: "Recompensa de equipo acreditada.", rewardUsdt: t.reward_usdt });
-  } catch (error) { await client.query("ROLLBACK").catch(()=>{}); return res.status(500).json({ message: "Error al reclamar recompensa.", detail: error.message }); }
+    return res.json({ message: capResult.message || "Recompensa de equipo acreditada.", rewardUsdt: creditedRewardUsdt, requestedRewardUsdt, partialCredit: Boolean(capResult.partial) });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(()=>{});
+    if (isNoPlanBalanceCapError(error)) {
+      return res.status(400).json({ message: error.message, code: error.code });
+    }
+    return res.status(500).json({ message: "Error al reclamar recompensa.", detail: error.message });
+  }
   finally { client.release(); }
 }
 

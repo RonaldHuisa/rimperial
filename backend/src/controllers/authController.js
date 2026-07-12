@@ -7,6 +7,7 @@ const { ensureRouletteSchema, normalizePrize, normalizeSpin, pickPrize } = requi
 const { addAlchemyAddressToNetworkWebhooks } = require("../services/alchemyWebhookService");
 const { ensureCreditPointsSchema, awardCreditPointMilestone, adjustCreditPoints } = require("../services/creditPointsService");
 const { ensureRedeemCodeLimitSchema, getRedeemDailyLimitConfig, getUserRedeemDailyStatus, buildDailyLimitMessage, REDEEM_TIMEZONE } = require("../services/redeemCodeLimitService");
+const { assertNoPlanRewardBalanceCap, isNoPlanBalanceCapError } = require("../services/noPlanBalanceCapService");
 
 const { generateUniqueReferralCode } = require("../utils/referralUtil");
 const { getClientIp, ensureSecuritySchema, captureRegisterIp, captureLoginIp, ensureIpCanRegister, logSecurityEvent } = require("../services/securityService");
@@ -703,7 +704,10 @@ async function redeemCode(req, res) {
 
         // Bloquea la cuenta para impedir que solicitudes simultáneas superen el límite diario.
         const userLock = await client.query(
-            `SELECT id, COALESCE(recharge_balance_usdt,0)::numeric AS recharge_balance_usdt FROM users WHERE id = $1 FOR UPDATE`,
+            `SELECT id,
+                    COALESCE(recharge_balance_usdt,0)::numeric AS recharge_balance_usdt,
+                    COALESCE(withdrawable_usdt,0)::numeric AS withdrawable_usdt
+             FROM users WHERE id = $1 FOR UPDATE`,
             [userId]
         );
 
@@ -777,31 +781,17 @@ async function redeemCode(req, res) {
 
         const balanceType = String(code.balance_type || "").toLowerCase();
 
-        if (
-            balanceType === "recharge" &&
-            dailyStatus.activeLevel < 1 &&
-            limitConfig.noPlanGuaranteeCapActive
-        ) {
-            const currentGuarantee = Number(userLock.rows[0]?.recharge_balance_usdt || 0);
-            const guaranteeCap = Number(limitConfig.noPlanGuaranteeCapUsdt || 10);
-            const resultingGuarantee = Number((currentGuarantee + amount).toFixed(2));
-
-            if (currentGuarantee >= guaranteeCap || resultingGuarantee > guaranteeCap) {
-                await client.query("ROLLBACK");
-
-                const message = currentGuarantee >= guaranteeCap
-                    ? `Alcanzaste el límite de ${guaranteeCap.toFixed(2)} USDT en saldo de garantía para cuentas sin plan activo. Activa un plan para seguir canjeando códigos de garantía.`
-                    : `Este código elevaría tu saldo de garantía a ${resultingGuarantee.toFixed(2)} USDT y superaría el límite de ${guaranteeCap.toFixed(2)} USDT para cuentas sin plan activo.`;
-
-                return res.status(400).json({
-                    message,
-                    guaranteeCapReached: true,
-                    currentGuaranteeBalance: Number(currentGuarantee.toFixed(2)),
-                    guaranteeCapUsdt: Number(guaranteeCap.toFixed(2)),
-                    activeLevel: dailyStatus.activeLevel,
-                });
-            }
+        if (balanceType !== "recharge" && balanceType !== "withdrawable") {
+            await client.query("ROLLBACK");
+            return res.status(400).json({ message: "Código no válido." });
         }
+
+        const capResult = await assertNoPlanRewardBalanceCap(client, {
+            userId,
+            balanceType,
+            amount,
+        });
+        const creditedAmount = Number(capResult.creditedAmount || amount);
 
         if (balanceType === "recharge") {
             await client.query(
@@ -812,9 +802,9 @@ async function redeemCode(req, res) {
                   recharge_balance_usdt = COALESCE(recharge_balance_usdt,0) + $1
                 WHERE id = $2
                 `,
-                [amount, userId]
+                [creditedAmount, userId]
             );
-        } else if (balanceType === "withdrawable") {
+        } else {
             await client.query(
                 `
                 UPDATE users
@@ -823,11 +813,8 @@ async function redeemCode(req, res) {
                   earnings_balance_usdt = COALESCE(earnings_balance_usdt,0) + $1
                 WHERE id = $2
                 `,
-                [amount, userId]
+                [creditedAmount, userId]
             );
-        } else {
-            await client.query("ROLLBACK");
-            return res.status(400).json({ message: "Código no válido." });
         }
 
         const redemption = await client.query(
@@ -848,7 +835,7 @@ async function redeemCode(req, res) {
             )
             RETURNING id
             `,
-            [code.id, userId, balanceType, amount, REDEEM_TIMEZONE]
+            [code.id, userId, balanceType, creditedAmount, REDEEM_TIMEZONE]
         );
 
         await client.query(
@@ -870,10 +857,10 @@ async function redeemCode(req, res) {
                 userId,
                 balanceType,
                 balanceType === "recharge" ? "Código aplicado a saldo de garantía" : "Código aplicado a saldo retirable",
-                amount,
+                creditedAmount,
                 `Código ${code.code} aplicado correctamente.`,
                 redemption.rows[0].id,
-                JSON.stringify({ codeId: code.id, code: code.code }),
+                JSON.stringify({ codeId: code.id, code: code.code, requestedAmountUsdt: amount, creditedAmountUsdt: creditedAmount, partialCredit: Boolean(capResult.partial) }),
             ]
         );
 
@@ -883,14 +870,19 @@ async function redeemCode(req, res) {
 
         const bundle = await getUserProfileBundle(userId);
         return res.json({
-            message: "Código canjeado correctamente.",
-            amountUsdt: amount,
+            message: capResult.message || "Código canjeado correctamente.",
+            amountUsdt: creditedAmount,
+            requestedAmountUsdt: amount,
+            partialCredit: Boolean(capResult.partial),
             balanceType,
             redeemDailyStatus: updatedDailyStatus,
             ...bundle,
         });
     } catch (error) {
         await client.query("ROLLBACK").catch(() => {});
+        if (isNoPlanBalanceCapError(error)) {
+            return res.status(400).json({ message: error.message, code: error.code });
+        }
         console.error("REDEEM CODE ERROR:", error);
         if (String(error.code) === "23505") {
             return res.status(400).json({ message: "Ya usaste este código." });
@@ -954,21 +946,32 @@ async function spinRoulette(req, res) {
             return res.status(400).json({ message: "Ruleta no disponible." });
         }
 
-        const amount = Number(prize.amount_usdt || 0);
+        const requestedAmount = Number(prize.amount_usdt || 0);
         const creditPoints = Number(prize.credit_points || 0);
         const prizeType = prize.prize_type || "withdrawable";
+        let creditedAmount = requestedAmount;
+        let capResult = null;
+
+        if ((prizeType === "withdrawable" || prizeType === "recharge") && requestedAmount > 0) {
+            capResult = await assertNoPlanRewardBalanceCap(client, {
+                userId,
+                balanceType: prizeType === "recharge" ? "recharge" : "withdrawable",
+                amount: requestedAmount,
+            });
+            creditedAmount = Number(capResult.creditedAmount || requestedAmount);
+        }
 
         await client.query(`UPDATE users SET roulette_points = GREATEST(COALESCE(roulette_points,0)-1,0) WHERE id=$1`, [userId]);
 
-        if (prizeType === "withdrawable" && amount > 0) {
+        if (prizeType === "withdrawable" && creditedAmount > 0) {
             await client.query(
                 `UPDATE users SET withdrawable_usdt=COALESCE(withdrawable_usdt,0)+$1, earnings_balance_usdt=COALESCE(earnings_balance_usdt,0)+$1 WHERE id=$2`,
-                [amount, userId]
+                [creditedAmount, userId]
             );
-        } else if (prizeType === "recharge" && amount > 0) {
+        } else if (prizeType === "recharge" && creditedAmount > 0) {
             await client.query(
                 `UPDATE users SET balance_usdt=COALESCE(balance_usdt,0)+$1, recharge_balance_usdt=COALESCE(recharge_balance_usdt,0)+$1 WHERE id=$2`,
-                [amount, userId]
+                [creditedAmount, userId]
             );
         } else if (prizeType === "credit_points" && creditPoints > 0) {
             await adjustCreditPoints(client, {
@@ -988,10 +991,10 @@ async function spinRoulette(req, res) {
             VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb)
             RETURNING *
             `,
-            [userId, prize.id, prize.label, prizeType, amount, creditPoints, JSON.stringify({ source: "user_spin" })]
+            [userId, prize.id, prize.label, prizeType, creditedAmount, creditPoints, JSON.stringify({ source: "user_spin", requestedAmountUsdt: requestedAmount, creditedAmountUsdt: creditedAmount, partialCredit: Boolean(capResult?.partial) })]
         );
 
-        if ((prizeType === "withdrawable" || prizeType === "recharge") && amount > 0) {
+        if ((prizeType === "withdrawable" || prizeType === "recharge") && creditedAmount > 0) {
             await client.query(
                 `
                 INSERT INTO account_ledger(user_id,balance_type,direction,type,title,amount_usdt,description,reference_type,reference_id,metadata,status)
@@ -1001,10 +1004,10 @@ async function spinRoulette(req, res) {
                     userId,
                     prizeType === "recharge" ? "recharge" : "withdrawable",
                     "Premio de ruleta",
-                    amount,
+                    creditedAmount,
                     `Premio obtenido en ruleta: ${prize.label}`,
                     spinResult.rows[0].id,
-                    JSON.stringify({ prizeId: prize.id, prizeLabel: prize.label, prizeType }),
+                    JSON.stringify({ prizeId: prize.id, prizeLabel: prize.label, prizeType, requestedAmountUsdt: requestedAmount, creditedAmountUsdt: creditedAmount, partialCredit: Boolean(capResult?.partial) }),
                 ]
             );
         }
@@ -1014,15 +1017,35 @@ async function spinRoulette(req, res) {
 
         await client.query("COMMIT");
 
+        const normalizedPrize = normalizePrize(prize);
+        const responsePrize = capResult?.partial
+            ? {
+                ...normalizedPrize,
+                originalLabel: normalizedPrize.label,
+                label: `${creditedAmount.toFixed(2)} USDT acreditados`,
+                amountUsdt: creditedAmount,
+                requestedAmountUsdt: requestedAmount,
+                partialCredit: true,
+              }
+            : {
+                ...normalizedPrize,
+                creditedAmountUsdt: creditedAmount,
+                requestedAmountUsdt: requestedAmount,
+                partialCredit: false,
+              };
+
         return res.json({
-            message: "Giro completado.",
-            prize: normalizePrize(prize),
+            message: capResult?.message || "Giro completado.",
+            prize: responsePrize,
             spin: normalizeSpin(spinResult.rows[0]),
             points: Number(remainingResult.rows[0]?.roulette_points || 0),
             history: historyResult.rows.map(normalizeSpin),
         });
     } catch (error) {
         await client.query("ROLLBACK").catch(() => {});
+        if (isNoPlanBalanceCapError(error)) {
+            return res.status(400).json({ message: error.message, code: error.code });
+        }
         console.error("SPIN ROULETTE ERROR:", error);
         return res.status(500).json({ message: "Error al girar ruleta.", detail: error.message });
     } finally {

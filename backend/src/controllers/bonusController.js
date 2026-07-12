@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { getBonusStatus, claimCheckin, claimTaskTier } = require('../services/bonusService');
+const { isNoPlanBalanceCapError } = require('../services/noPlanBalanceCapService');
 
 function getAuthUserId(req) {
   return req.user?.userId || req.user?.id;
@@ -25,7 +26,7 @@ async function postCheckin(req, res) {
     const row = await claimCheckin(userId, client);
     const status = await getBonusStatus(userId, client);
     await client.query('COMMIT');
-    return res.json({ message: 'Check-in acreditado correctamente.', checkin: row, status });
+    return res.json({ message: row.creditMessage || 'Check-in acreditado correctamente.', checkin: row, status });
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
     const message = error.message || 'No se pudo completar el check-in.';
@@ -37,8 +38,10 @@ async function postCheckin(req, res) {
         return res.json({ message });
       }
     }
-    console.error('BONUS CHECKIN ERROR:', error);
-    return res.status(400).json({ message });
+    if (!isNoPlanBalanceCapError(error)) {
+      console.error('BONUS CHECKIN ERROR:', error);
+    }
+    return res.status(400).json({ message, code: error.code || null });
   } finally {
     client.release();
   }
@@ -55,12 +58,14 @@ async function postTaskClaim(req, res) {
     const row = await claimTaskTier(userId, tierKey, client);
     const status = await getBonusStatus(userId, client);
     await client.query('COMMIT');
-    return res.json({ message: 'Recompensa acreditada correctamente.', claim: row, status });
+    return res.json({ message: row.creditMessage || 'Recompensa acreditada correctamente.', claim: row, status });
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
-    console.error('BONUS TASK CLAIM ERROR:', error);
+    if (!isNoPlanBalanceCapError(error)) {
+      console.error('BONUS TASK CLAIM ERROR:', error);
+    }
     const message = error.message || 'No se pudo reclamar la recompensa.';
-    return res.status(400).json({ message });
+    return res.status(400).json({ message, code: error.code || null });
   } finally {
     client.release();
   }

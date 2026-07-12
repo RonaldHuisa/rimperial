@@ -457,13 +457,17 @@ CREATE TABLE IF NOT EXISTS redeem_daily_limit_config (
   premium_daily_limit INTEGER NOT NULL DEFAULT 3 CHECK (premium_daily_limit > 0),
   premium_from_level INTEGER NOT NULL DEFAULT 3 CHECK (premium_from_level BETWEEN 1 AND 8),
   no_plan_guarantee_cap_active BOOLEAN NOT NULL DEFAULT TRUE,
-  no_plan_guarantee_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 10 CHECK (no_plan_guarantee_cap_usdt > 0),
+  no_plan_guarantee_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 5 CHECK (no_plan_guarantee_cap_usdt > 0),
+  no_plan_withdrawable_cap_active BOOLEAN NOT NULL DEFAULT TRUE,
+  no_plan_withdrawable_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 5 CHECK (no_plan_withdrawable_cap_usdt > 0),
   timezone VARCHAR(80) NOT NULL DEFAULT 'America/Lima',
   updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 INSERT INTO redeem_daily_limit_config(id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 ALTER TABLE redeem_daily_limit_config ADD COLUMN IF NOT EXISTS no_plan_guarantee_cap_active BOOLEAN NOT NULL DEFAULT TRUE;
-ALTER TABLE redeem_daily_limit_config ADD COLUMN IF NOT EXISTS no_plan_guarantee_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 10;
+ALTER TABLE redeem_daily_limit_config ADD COLUMN IF NOT EXISTS no_plan_guarantee_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 5;
+ALTER TABLE redeem_daily_limit_config ADD COLUMN IF NOT EXISTS no_plan_withdrawable_cap_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE redeem_daily_limit_config ADD COLUMN IF NOT EXISTS no_plan_withdrawable_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 5;
 ALTER TABLE redeem_code_redemptions ADD COLUMN IF NOT EXISTS redeemed_day DATE;
 CREATE INDEX IF NOT EXISTS idx_redeem_redemptions_user_day ON redeem_code_redemptions(user_id, redeemed_day);

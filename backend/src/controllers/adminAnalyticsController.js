@@ -837,6 +837,10 @@ async function patchAdminRedeemDailyLimitConfig(req, res) {
   const premiumFromLevel = Number(req.body?.premiumFromLevel ?? req.body?.premium_from_level);
   const noPlanGuaranteeCapActive = req.body?.noPlanGuaranteeCapActive ?? req.body?.no_plan_guarantee_cap_active;
   const noPlanGuaranteeCapUsdt = Number(req.body?.noPlanGuaranteeCapUsdt ?? req.body?.no_plan_guarantee_cap_usdt);
+  const rawNoPlanWithdrawableCapActive = req.body?.noPlanWithdrawableCapActive ?? req.body?.no_plan_withdrawable_cap_active;
+  const rawNoPlanWithdrawableCapUsdt = req.body?.noPlanWithdrawableCapUsdt ?? req.body?.no_plan_withdrawable_cap_usdt;
+  const noPlanWithdrawableCapActive = rawNoPlanWithdrawableCapActive == null ? true : Boolean(rawNoPlanWithdrawableCapActive);
+  const noPlanWithdrawableCapUsdt = Number(rawNoPlanWithdrawableCapUsdt ?? 5);
 
   if (!Number.isInteger(standardDailyLimit) || standardDailyLimit < 1 || standardDailyLimit > 20) {
     return res.status(400).json({ message: "El límite diario estándar debe estar entre 1 y 20." });
@@ -858,6 +862,10 @@ async function patchAdminRedeemDailyLimitConfig(req, res) {
     return res.status(400).json({ message: "El límite de garantía sin plan debe ser mayor a 0 y no superar 100000 USDT." });
   }
 
+  if (!Number.isFinite(noPlanWithdrawableCapUsdt) || noPlanWithdrawableCapUsdt <= 0 || noPlanWithdrawableCapUsdt > 100000) {
+    return res.status(400).json({ message: "El límite retirable sin plan debe ser mayor a 0 y no superar 100000 USDT." });
+  }
+
   const client = await pool.connect();
   try {
     await ensureRedeemCodeLimitSchema();
@@ -869,6 +877,8 @@ async function patchAdminRedeemDailyLimitConfig(req, res) {
       premiumFromLevel,
       noPlanGuaranteeCapActive: Boolean(noPlanGuaranteeCapActive),
       noPlanGuaranteeCapUsdt,
+      noPlanWithdrawableCapActive,
+      noPlanWithdrawableCapUsdt,
       updatedBy: adminId,
     });
     await client.query("COMMIT");

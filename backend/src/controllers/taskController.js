@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const { ensureRoyalAiSchema, seedRoyalVipPackages, getRuntimeLevelConfig, getCooldownLabel } = require("../services/royalAiTaskService");
+const { assertNoPlanRewardBalanceCap, isNoPlanBalanceCapError } = require("../services/noPlanBalanceCapService");
 
 function getAuthUserId(req) { return req.user.userId || req.user.id; }
 function toNumber(value) { const n = Number(value || 0); return Number.isFinite(n) ? n : 0; }
@@ -278,7 +279,14 @@ async function completeVipTask(req, res) {
     const question = q.rows[0];
     const correctOption = question.correct_option;
     const isCorrect = selectedOption === correctOption;
-    const rewardUsdt = cfg.rewardUsdt;
+    const requestedRewardUsdt = cfg.rewardUsdt;
+
+    const capResult = await assertNoPlanRewardBalanceCap(client, {
+      userId,
+      balanceType: 'withdrawable',
+      amount: requestedRewardUsdt,
+    });
+    const rewardUsdt = Number(capResult.creditedAmount || requestedRewardUsdt);
 
     const responseResult = await client.query(
       `
@@ -286,7 +294,7 @@ async function completeVipTask(req, res) {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW() + ($8::int * INTERVAL '1 second'),$9::jsonb)
       RETURNING *
       `,
-      [userId, question.id, activeLevel, selectedOption, correctOption, isCorrect, rewardUsdt, cfg.cooldownSeconds, JSON.stringify({ model: "base_reward_plus_accuracy", category: question.category, asset: question.asset })]
+      [userId, question.id, activeLevel, selectedOption, correctOption, isCorrect, rewardUsdt, cfg.cooldownSeconds, JSON.stringify({ model: "base_reward_plus_accuracy", category: question.category, asset: question.asset, requestedRewardUsdt, creditedRewardUsdt: rewardUsdt, partialCredit: Boolean(capResult.partial) })]
     );
     const response = responseResult.rows[0];
 
@@ -299,12 +307,14 @@ async function completeVipTask(req, res) {
       INSERT INTO account_ledger(user_id,balance_type,direction,type,title,amount_usdt,description,reference_type,reference_id,metadata,status)
       VALUES ($1,'earnings','credit','ai_task_reward','Recompensa por tarea IA',$2,$3,'ai_task_response',$4,$5::jsonb,'completed')
       `,
-      [userId, rewardUsdt, `Respuesta registrada en ${question.title}.`, response.id, JSON.stringify({ questionId: question.id, selectedOption, correctOption, isCorrect, activeLevel })]
+      [userId, rewardUsdt, `Respuesta registrada en ${question.title}.`, response.id, JSON.stringify({ questionId: question.id, selectedOption, correctOption, isCorrect, activeLevel, requestedRewardUsdt, creditedRewardUsdt: rewardUsdt, partialCredit: Boolean(capResult.partial) })]
     );
     await client.query("COMMIT");
     return res.json({
-      message: "Tarea registrada correctamente.",
+      message: capResult.message || "Tarea registrada correctamente.",
       rewardUsdt,
+      requestedRewardUsdt,
+      partialCredit: Boolean(capResult.partial),
       isCorrect,
       selectedOption,
       correctOption,
@@ -314,6 +324,9 @@ async function completeVipTask(req, res) {
     });
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
+    if (isNoPlanBalanceCapError(error)) {
+      return res.status(400).json({ message: error.message, code: error.code });
+    }
     console.error("COMPLETE ROYAL AI TASK ERROR:", error);
     return res.status(500).json({ message: "Error al registrar la tarea IA.", detail: error.message });
   } finally { client.release(); }

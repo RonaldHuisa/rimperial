@@ -1,3 +1,5 @@
+const { assertNoPlanRewardBalanceCap, isNoPlanBalanceCapError } = require("./noPlanBalanceCapService");
+
 async function getUserSponsorId(client, userId) {
   const result = await client.query(
     `SELECT referred_by_id FROM users WHERE id = $1`,
@@ -182,6 +184,40 @@ async function createSingleReferralCommission({
   }
 
   const percent = referralDepth === 1 ? 7 : referralDepth === 2 ? 2 : 1;
+  const requestedCommissionAmount = Number(((Number(commissionBaseAmount || 0) * Number(percent || 0)) / 100).toFixed(8));
+
+  let capResult;
+  try {
+    capResult = await assertNoPlanRewardBalanceCap(client, {
+      userId: receiverUserId,
+      balanceType: "withdrawable",
+      amount: requestedCommissionAmount,
+    });
+  } catch (error) {
+    if (isNoPlanBalanceCapError(error)) {
+      await client.query(
+        `
+        INSERT INTO referral_commissions
+        (receiver_user_id, source_user_id, level, source_type, source_id, base_amount_usdt, percent, amount_usdt)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,0)
+        ON CONFLICT (receiver_user_id, source_type, source_id, level) DO NOTHING
+        `,
+        [receiverUserId, sourceUserId, referralDepth, sourceType, sourceId, commissionBaseAmount, percent]
+      );
+      console.log("REFERRAL COMMISSION SKIPPED", {
+        reason: "NO_PLAN_WITHDRAWABLE_CAP_REACHED",
+        receiverUserId,
+        sourceUserId,
+        sourceType,
+        sourceId,
+        requestedCommissionAmount,
+      });
+      return;
+    }
+    throw error;
+  }
+
+  const creditedCommissionAmount = Number(capResult.creditedAmount || requestedCommissionAmount);
 
   const commissionResult = await client.query(
     `
@@ -197,7 +233,7 @@ async function createSingleReferralCommission({
       amount_usdt
     )
     VALUES
-    ($1,$2,$3,$4,$5,$6,$7,($6::numeric * $7::numeric / 100))
+    ($1,$2,$3,$4,$5,$6,$7,$8)
     ON CONFLICT (receiver_user_id, source_type, source_id, level)
     DO NOTHING
     RETURNING id, amount_usdt
@@ -210,6 +246,7 @@ async function createSingleReferralCommission({
       sourceId,
       commissionBaseAmount,
       percent,
+      creditedCommissionAmount,
     ]
   );
 
@@ -270,6 +307,9 @@ async function createSingleReferralCommission({
         previousCommissionableLevel,
         originalBaseAmountUsdt: baseAmountUsdt,
         commissionBaseAmountUsdt: commissionBaseAmount,
+        requestedCommissionAmountUsdt: requestedCommissionAmount,
+        creditedCommissionAmountUsdt: creditedCommissionAmount,
+        partialCredit: Boolean(capResult.partial),
       }),
       "completed",
     ]

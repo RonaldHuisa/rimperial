@@ -7,7 +7,9 @@ const DEFAULT_CONFIG = {
   premiumDailyLimit: 3,
   premiumFromLevel: 3,
   noPlanGuaranteeCapActive: true,
-  noPlanGuaranteeCapUsdt: 10,
+  noPlanGuaranteeCapUsdt: 5,
+  noPlanWithdrawableCapActive: true,
+  noPlanWithdrawableCapUsdt: 5,
   timezone: REDEEM_TIMEZONE,
 };
 
@@ -28,6 +30,10 @@ function normalizeConfig(row = {}) {
     noPlanGuaranteeCapUsdt: Number.isFinite(Number(row.no_plan_guarantee_cap_usdt))
       ? Number(row.no_plan_guarantee_cap_usdt)
       : DEFAULT_CONFIG.noPlanGuaranteeCapUsdt,
+    noPlanWithdrawableCapActive: row.no_plan_withdrawable_cap_active ?? DEFAULT_CONFIG.noPlanWithdrawableCapActive,
+    noPlanWithdrawableCapUsdt: Number.isFinite(Number(row.no_plan_withdrawable_cap_usdt))
+      ? Number(row.no_plan_withdrawable_cap_usdt)
+      : DEFAULT_CONFIG.noPlanWithdrawableCapUsdt,
     timezone: row.timezone || DEFAULT_CONFIG.timezone,
     updatedAt: row.updated_at || null,
   };
@@ -44,7 +50,9 @@ async function ensureRedeemCodeLimitSchema() {
           premium_daily_limit INTEGER NOT NULL DEFAULT 3 CHECK (premium_daily_limit > 0),
           premium_from_level INTEGER NOT NULL DEFAULT 3 CHECK (premium_from_level BETWEEN 1 AND 8),
           no_plan_guarantee_cap_active BOOLEAN NOT NULL DEFAULT TRUE,
-          no_plan_guarantee_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 10 CHECK (no_plan_guarantee_cap_usdt > 0),
+          no_plan_guarantee_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 5 CHECK (no_plan_guarantee_cap_usdt > 0),
+          no_plan_withdrawable_cap_active BOOLEAN NOT NULL DEFAULT TRUE,
+          no_plan_withdrawable_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 5 CHECK (no_plan_withdrawable_cap_usdt > 0),
           timezone VARCHAR(80) NOT NULL DEFAULT 'America/Lima',
           updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
           updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -64,7 +72,17 @@ async function ensureRedeemCodeLimitSchema() {
 
       await pool.query(`
         ALTER TABLE redeem_daily_limit_config
-        ADD COLUMN IF NOT EXISTS no_plan_guarantee_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 10
+        ADD COLUMN IF NOT EXISTS no_plan_guarantee_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 5
+      `);
+
+      await pool.query(`
+        ALTER TABLE redeem_daily_limit_config
+        ADD COLUMN IF NOT EXISTS no_plan_withdrawable_cap_active BOOLEAN NOT NULL DEFAULT TRUE
+      `);
+
+      await pool.query(`
+        ALTER TABLE redeem_daily_limit_config
+        ADD COLUMN IF NOT EXISTS no_plan_withdrawable_cap_usdt NUMERIC(18,2) NOT NULL DEFAULT 5
       `);
 
       await pool.query(`
@@ -116,6 +134,8 @@ async function updateRedeemDailyLimitConfig(client, {
   premiumFromLevel,
   noPlanGuaranteeCapActive,
   noPlanGuaranteeCapUsdt,
+  noPlanWithdrawableCapActive,
+  noPlanWithdrawableCapUsdt,
   updatedBy,
 }) {
   const standard = toPositiveInt(standardDailyLimit, DEFAULT_CONFIG.standardDailyLimit);
@@ -125,6 +145,11 @@ async function updateRedeemDailyLimitConfig(client, {
   const normalizedGuaranteeCap = Number.isFinite(guaranteeCap) && guaranteeCap > 0
     ? Number(guaranteeCap.toFixed(2))
     : DEFAULT_CONFIG.noPlanGuaranteeCapUsdt;
+
+  const withdrawableCap = Number(noPlanWithdrawableCapUsdt);
+  const normalizedWithdrawableCap = Number.isFinite(withdrawableCap) && withdrawableCap > 0
+    ? Number(withdrawableCap.toFixed(2))
+    : DEFAULT_CONFIG.noPlanWithdrawableCapUsdt;
 
   const result = await client.query(
     `
@@ -136,13 +161,15 @@ async function updateRedeemDailyLimitConfig(client, {
       premium_from_level = $4,
       no_plan_guarantee_cap_active = $5,
       no_plan_guarantee_cap_usdt = $6,
-      timezone = $7,
-      updated_by = $8,
+      no_plan_withdrawable_cap_active = $7,
+      no_plan_withdrawable_cap_usdt = $8,
+      timezone = $9,
+      updated_by = $10,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = 1
     RETURNING *
     `,
-    [Boolean(isActive), standard, premium, fromLevel, Boolean(noPlanGuaranteeCapActive), normalizedGuaranteeCap, REDEEM_TIMEZONE, updatedBy || null]
+    [Boolean(isActive), standard, premium, fromLevel, Boolean(noPlanGuaranteeCapActive), normalizedGuaranteeCap, Boolean(noPlanWithdrawableCapActive), normalizedWithdrawableCap, REDEEM_TIMEZONE, updatedBy || null]
   );
 
   return normalizeConfig(result.rows[0] || {});
@@ -179,15 +206,21 @@ async function getUserRedeemDailyStatus(client, userId, config = null) {
       [userId, REDEEM_TIMEZONE]
     ),
     client.query(
-      `SELECT COALESCE(recharge_balance_usdt,0)::numeric AS guarantee_balance FROM users WHERE id = $1 LIMIT 1`,
+      `SELECT
+         COALESCE(recharge_balance_usdt,0)::numeric AS guarantee_balance,
+         COALESCE(withdrawable_usdt,0)::numeric AS withdrawable_balance
+       FROM users WHERE id = $1 LIMIT 1`,
       [userId]
     ),
   ]);
 
   const usedToday = Number(usageResult.rows[0]?.used_today || 0);
   const currentGuaranteeBalance = Number(balanceResult.rows[0]?.guarantee_balance || 0);
+  const currentWithdrawableBalance = Number(balanceResult.rows[0]?.withdrawable_balance || 0);
   const noPlanGuaranteeCapApplies = Boolean(resolvedConfig.noPlanGuaranteeCapActive && activeLevel < 1);
   const noPlanGuaranteeCapUsdt = Number(resolvedConfig.noPlanGuaranteeCapUsdt || DEFAULT_CONFIG.noPlanGuaranteeCapUsdt);
+  const noPlanWithdrawableCapApplies = Boolean(resolvedConfig.noPlanWithdrawableCapActive && activeLevel < 1);
+  const noPlanWithdrawableCapUsdt = Number(resolvedConfig.noPlanWithdrawableCapUsdt || DEFAULT_CONFIG.noPlanWithdrawableCapUsdt);
   const dailyLimit = activeLevel >= resolvedConfig.premiumFromLevel
     ? resolvedConfig.premiumDailyLimit
     : resolvedConfig.standardDailyLimit;
@@ -209,6 +242,14 @@ async function getUserRedeemDailyStatus(client, userId, config = null) {
       ? Math.max(0, Number((noPlanGuaranteeCapUsdt - currentGuaranteeBalance).toFixed(2)))
       : null,
     guaranteeCapReached: Boolean(noPlanGuaranteeCapApplies && currentGuaranteeBalance >= noPlanGuaranteeCapUsdt),
+    noPlanWithdrawableCapActive: Boolean(resolvedConfig.noPlanWithdrawableCapActive),
+    noPlanWithdrawableCapApplies,
+    noPlanWithdrawableCapUsdt,
+    currentWithdrawableBalance,
+    remainingWithdrawableCapacity: noPlanWithdrawableCapApplies
+      ? Math.max(0, Number((noPlanWithdrawableCapUsdt - currentWithdrawableBalance).toFixed(2)))
+      : null,
+    withdrawableCapReached: Boolean(noPlanWithdrawableCapApplies && currentWithdrawableBalance >= noPlanWithdrawableCapUsdt),
   };
 }
 

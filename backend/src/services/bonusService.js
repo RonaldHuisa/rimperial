@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { isProfileComplete } = require('./profileService');
+const { assertNoPlanRewardBalanceCap } = require('./noPlanBalanceCapService');
 
 const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
 const PASANTIA_START_DATE = '2026-07-07';
@@ -9,7 +10,7 @@ const PASANTIA_MAX_CHECKINS = 5;
 const PLAN_MAX_WEEKLY_CHECKINS = 5;
 const PASANTIA_TASK_TIERS = [
   { key: 'trial_invite_1', required: 1, rewardUsdt: 1, rewardRoulettePoints: 0 },
-  { key: 'trial_invite_3', required: 3, rewardUsdt: 4, rewardRoulettePoints: 0 },
+  { key: 'trial_invite_3', required: 3, rewardUsdt: 3, rewardRoulettePoints: 0 },
 ];
 
 const PLAN_CHECKIN_REWARDS = {
@@ -49,6 +50,26 @@ function formatShiftedDate(date = new Date()) {
   const month = String(shifted.getUTCMonth() + 1).padStart(2, '0');
   const day = String(shifted.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function getCheckinDateKey(row) {
+  const explicitKey = String(row?.checkin_date_key || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(explicitKey)) return explicitKey;
+
+  const value = row?.checkin_date;
+  if (!value) return '';
+
+  if (typeof value === 'string') {
+    const isoMatch = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoMatch) return isoMatch[1];
+  }
+
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  return '';
 }
 
 function getPeruDateParts(date = new Date()) {
@@ -186,12 +207,19 @@ async function getUserBonusContext(userId, clientOrPool = pool) {
 }
 
 async function creditRechargeBalance(client, userId, amount, title, description, referenceType, referenceId, metadata = {}) {
-  const safeAmount = toNumber(amount, 0);
-  if (safeAmount <= 0) return;
+  const requestedAmount = toNumber(amount, 0);
+  if (requestedAmount <= 0) return { requestedAmount: 0, creditedAmount: 0, partial: false, message: null };
+
+  const capResult = await assertNoPlanRewardBalanceCap(client, {
+    userId,
+    balanceType: 'recharge',
+    amount: requestedAmount,
+  });
+  const creditedAmount = Number(capResult.creditedAmount || requestedAmount);
 
   await client.query(
     `UPDATE users SET balance_usdt = COALESCE(balance_usdt,0) + $1, recharge_balance_usdt = COALESCE(recharge_balance_usdt,0) + $1 WHERE id = $2`,
-    [safeAmount, userId]
+    [creditedAmount, userId]
   );
 
   await client.query(
@@ -199,17 +227,26 @@ async function creditRechargeBalance(client, userId, amount, title, description,
     INSERT INTO account_ledger(user_id,balance_type,direction,type,title,amount_usdt,description,reference_type,reference_id,metadata,status)
     VALUES ($1,'recharge','credit','bonus_reward',$2,$3,$4,$5,$6,$7::jsonb,'completed')
     `,
-    [userId, title, safeAmount, description, referenceType, referenceId, JSON.stringify(metadata)]
+    [userId, title, creditedAmount, description, referenceType, referenceId, JSON.stringify({ ...metadata, requestedAmountUsdt: requestedAmount, creditedAmountUsdt: creditedAmount, partialCredit: Boolean(capResult.partial) })]
   );
+
+  return { ...capResult, requestedAmount, creditedAmount };
 }
 
 async function creditWithdrawableBalance(client, userId, amount, title, description, referenceType, referenceId, metadata = {}) {
-  const safeAmount = toNumber(amount, 0);
-  if (safeAmount <= 0) return;
+  const requestedAmount = toNumber(amount, 0);
+  if (requestedAmount <= 0) return { requestedAmount: 0, creditedAmount: 0, partial: false, message: null };
+
+  const capResult = await assertNoPlanRewardBalanceCap(client, {
+    userId,
+    balanceType: 'withdrawable',
+    amount: requestedAmount,
+  });
+  const creditedAmount = Number(capResult.creditedAmount || requestedAmount);
 
   await client.query(
     `UPDATE users SET withdrawable_usdt = COALESCE(withdrawable_usdt,0) + $1, earnings_balance_usdt = COALESCE(earnings_balance_usdt,0) + $1 WHERE id = $2`,
-    [safeAmount, userId]
+    [creditedAmount, userId]
   );
 
   await client.query(
@@ -217,8 +254,10 @@ async function creditWithdrawableBalance(client, userId, amount, title, descript
     INSERT INTO account_ledger(user_id,balance_type,direction,type,title,amount_usdt,description,reference_type,reference_id,metadata,status)
     VALUES ($1,'withdrawable','credit','bonus_reward',$2,$3,$4,$5,$6,$7::jsonb,'completed')
     `,
-    [userId, title, safeAmount, description, referenceType, referenceId, JSON.stringify(metadata)]
+    [userId, title, creditedAmount, description, referenceType, referenceId, JSON.stringify({ ...metadata, requestedAmountUsdt: requestedAmount, creditedAmountUsdt: creditedAmount, partialCredit: Boolean(capResult.partial) })]
   );
+
+  return { ...capResult, requestedAmount, creditedAmount };
 }
 
 async function addRoulettePoints(client, userId, points) {
@@ -298,7 +337,7 @@ async function getBonusStatus(userId, clientOrPool = pool) {
   const planReward = PLAN_CHECKIN_REWARDS[context.activeLevel] || 0;
 
   const [checkinsResult, claimResult, qualifiedTrialInvites, qualifiedPlanInvites] = await Promise.all([
-    clientOrPool.query(`SELECT * FROM bonus_checkins WHERE user_id = $1 ORDER BY checkin_date ASC, id ASC`, [userId]),
+    clientOrPool.query(`SELECT bc.*, TO_CHAR(bc.checkin_date, 'YYYY-MM-DD') AS checkin_date_key FROM bonus_checkins bc WHERE bc.user_id = $1 ORDER BY bc.checkin_date ASC, bc.id ASC`, [userId]),
     clientOrPool.query(`SELECT * FROM bonus_task_claims WHERE user_id = $1 ORDER BY created_at DESC, id DESC`, [userId]),
     countQualifiedTrialInvites(userId, clientOrPool),
     countQualifiedPlanReferralsForWeek(userId, weekWindow, clientOrPool),
@@ -310,12 +349,12 @@ async function getBonusStatus(userId, clientOrPool = pool) {
   const trialCheckins = allCheckins.filter((row) => row.bonus_kind === 'trial_checkin');
   const planCheckins = allCheckins.filter((row) => row.bonus_kind === 'plan_checkin');
   const currentWeekPlanCheckins = planCheckins.filter((row) => {
-    const date = String(row.checkin_date).slice(0, 10);
+    const date = getCheckinDateKey(row);
     return date >= weekWindow.startDate && date <= weekWindow.endDate;
   });
 
-  const trialTodayDone = trialCheckins.some((row) => String(row.checkin_date).slice(0, 10) === todayPeru);
-  const planTodayDone = currentWeekPlanCheckins.some((row) => String(row.checkin_date).slice(0, 10) === todayPeru);
+  const trialTodayDone = trialCheckins.some((row) => getCheckinDateKey(row) === todayPeru);
+  const planTodayDone = currentWeekPlanCheckins.some((row) => getCheckinDateKey(row) === todayPeru);
 
   const trialLifetimeClaims = allClaims.filter((row) => row.bonus_kind === 'trial_tasks');
   const planWeeklyClaims = allClaims.filter((row) => row.bonus_kind === 'plan_tasks' && String(row.period_key) === weekWindow.startDate);
@@ -453,13 +492,22 @@ async function claimCheckin(userId, client) {
   if (!insert.rows.length) throw new Error('El check-in de hoy ya fue registrado.');
   const row = insert.rows[0];
 
-  if (status.checkin.balanceType === 'withdrawable') {
-    await creditWithdrawableBalance(client, userId, rewardUsdt, 'Check-in diario', 'Bono de asistencia diaria.', 'bonus_checkin', row.id, { bonusKind, vipLevel, checkinDate: todayPeru });
-  } else {
-    await creditRechargeBalance(client, userId, rewardUsdt, 'Check-in pasantía', 'Bono de asistencia de pasantía.', 'bonus_checkin', row.id, { bonusKind, vipLevel, checkinDate: todayPeru });
+  const creditResult = status.checkin.balanceType === 'withdrawable'
+    ? await creditWithdrawableBalance(client, userId, rewardUsdt, 'Check-in diario', 'Bono de asistencia diaria.', 'bonus_checkin', row.id, { bonusKind, vipLevel, checkinDate: todayPeru })
+    : await creditRechargeBalance(client, userId, rewardUsdt, 'Check-in pasantía', 'Bono de asistencia de pasantía.', 'bonus_checkin', row.id, { bonusKind, vipLevel, checkinDate: todayPeru });
+
+  if (Number(creditResult.creditedAmount) !== Number(rewardUsdt)) {
+    await client.query(`UPDATE bonus_checkins SET amount_usdt = $1 WHERE id = $2`, [creditResult.creditedAmount, row.id]);
+    row.amount_usdt = creditResult.creditedAmount;
   }
 
-  return row;
+  return {
+    ...row,
+    requestedAmountUsdt: rewardUsdt,
+    creditedAmountUsdt: creditResult.creditedAmount,
+    partialCredit: Boolean(creditResult.partial),
+    creditMessage: creditResult.message || null,
+  };
 }
 
 async function claimTaskTier(userId, tierKey, client) {
@@ -487,17 +535,26 @@ async function claimTaskTier(userId, tierKey, client) {
   if (!insert.rows.length) throw new Error('Esta recompensa ya fue reclamada.');
   const row = insert.rows[0];
 
-  if (tier.balanceType === 'withdrawable') {
-    await creditWithdrawableBalance(client, userId, tier.rewardUsdt, 'Bono por tarea semanal', 'Recompensa semanal por referidos válidos.', 'bonus_task_claim', row.id, { tierKey: tier.key, periodKey });
-  } else {
-    await creditRechargeBalance(client, userId, tier.rewardUsdt, 'Bono por tarea de pasantía', 'Recompensa por meta de pasantía.', 'bonus_task_claim', row.id, { tierKey: tier.key, periodKey });
+  const creditResult = tier.balanceType === 'withdrawable'
+    ? await creditWithdrawableBalance(client, userId, tier.rewardUsdt, 'Bono por tarea semanal', 'Recompensa semanal por referidos válidos.', 'bonus_task_claim', row.id, { tierKey: tier.key, periodKey })
+    : await creditRechargeBalance(client, userId, tier.rewardUsdt, 'Bono por tarea de pasantía', 'Recompensa por meta de pasantía.', 'bonus_task_claim', row.id, { tierKey: tier.key, periodKey });
+
+  if (Number(creditResult.creditedAmount) !== Number(tier.rewardUsdt)) {
+    await client.query(`UPDATE bonus_task_claims SET amount_usdt = $1 WHERE id = $2`, [creditResult.creditedAmount, row.id]);
+    row.amount_usdt = creditResult.creditedAmount;
   }
 
   if (Number(tier.rewardRoulettePoints || 0) > 0) {
     await addRoulettePoints(client, userId, Number(tier.rewardRoulettePoints || 0));
   }
 
-  return row;
+  return {
+    ...row,
+    requestedAmountUsdt: Number(tier.rewardUsdt || 0),
+    creditedAmountUsdt: Number(creditResult.creditedAmount || 0),
+    partialCredit: Boolean(creditResult.partial),
+    creditMessage: creditResult.message || null,
+  };
 }
 
 module.exports = {

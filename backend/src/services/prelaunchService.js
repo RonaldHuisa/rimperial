@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const { assertNoPlanRewardBalanceCap, isNoPlanBalanceCapError } = require("./noPlanBalanceCapService");
 
 const DEFAULT_CONFIG = {
   isActive: true,
@@ -143,8 +144,15 @@ async function getConfig(clientOrPool = pool) {
 }
 
 async function creditRechargeBalance(client, { userId, amount, type, title, description, referenceType, referenceId, metadata = {} }) {
-  const safeAmount = toNumber(amount, 0);
-  if (safeAmount <= 0) return;
+  const requestedAmount = toNumber(amount, 0);
+  if (requestedAmount <= 0) return { requestedAmount: 0, creditedAmount: 0, partial: false, message: null };
+
+  const capResult = await assertNoPlanRewardBalanceCap(client, {
+    userId,
+    balanceType: 'recharge',
+    amount: requestedAmount,
+  });
+  const creditedAmount = Number(capResult.creditedAmount || requestedAmount);
 
   await client.query(
     `
@@ -154,7 +162,7 @@ async function creditRechargeBalance(client, { userId, amount, type, title, desc
       recharge_balance_usdt = COALESCE(recharge_balance_usdt,0) + $1
     WHERE id = $2
     `,
-    [safeAmount, userId]
+    [creditedAmount, userId]
   );
 
   await client.query(
@@ -167,13 +175,15 @@ async function creditRechargeBalance(client, { userId, amount, type, title, desc
       userId,
       type,
       title,
-      safeAmount,
+      creditedAmount,
       description,
       referenceType,
       referenceId,
-      JSON.stringify(metadata),
+      JSON.stringify({ ...metadata, requestedAmountUsdt: requestedAmount, creditedAmountUsdt: creditedAmount, partialCredit: Boolean(capResult.partial) }),
     ]
   );
+
+  return { ...capResult, requestedAmount, creditedAmount };
 }
 
 async function refreshReferralReward(client, userId, config) {
@@ -213,16 +223,29 @@ async function refreshReferralReward(client, userId, config) {
     return retry.rows[0] || null;
   }
 
-  await creditRechargeBalance(client, {
-    userId,
-    amount: config.inviteRewardUsdt,
-    type: "prelaunch_invite",
-    title: "Bono pre-lanzamiento por invitación",
-    description: "Bono por usuario invitado validado por gerente.",
-    referenceType: "prelaunch_referral_reward",
-    referenceId: reward.rows[0].id,
-    metadata: { invitedUserId: invitedUser.id },
-  });
+  let creditResult;
+  try {
+    creditResult = await creditRechargeBalance(client, {
+      userId,
+      amount: config.inviteRewardUsdt,
+      type: "prelaunch_invite",
+      title: "Bono pre-lanzamiento por invitación",
+      description: "Bono por usuario invitado validado por gerente.",
+      referenceType: "prelaunch_referral_reward",
+      referenceId: reward.rows[0].id,
+      metadata: { invitedUserId: invitedUser.id },
+    });
+  } catch (error) {
+    if (!isNoPlanBalanceCapError(error)) throw error;
+    await client.query(`UPDATE prelaunch_referral_rewards SET amount_usdt = 0 WHERE id = $1`, [reward.rows[0].id]);
+    reward.rows[0].amount_usdt = 0;
+    return reward.rows[0];
+  }
+
+  if (Number(creditResult.creditedAmount) !== Number(config.inviteRewardUsdt)) {
+    await client.query(`UPDATE prelaunch_referral_rewards SET amount_usdt = $1 WHERE id = $2`, [creditResult.creditedAmount, reward.rows[0].id]);
+    reward.rows[0].amount_usdt = creditResult.creditedAmount;
+  }
 
   return reward.rows[0];
 }
