@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FiActivity, FiAlertTriangle, FiAward, FiBarChart2, FiCheckCircle, FiCopy, FiCreditCard, FiDatabase, FiDollarSign, FiEdit3, FiExternalLink, FiFilter, FiRefreshCw, FiSearch, FiShield, FiSliders, FiUsers, FiMessageCircle, FiBookOpen, FiPlus, FiTrash2, FiUpload, FiGift, FiVideo } from "react-icons/fi";
+import { FiActivity, FiAlertTriangle, FiArrowUpCircle, FiAward, FiBarChart2, FiCheckCircle, FiCopy, FiCreditCard, FiDatabase, FiDollarSign, FiEdit3, FiExternalLink, FiFilter, FiRefreshCw, FiSearch, FiShield, FiSliders, FiUser, FiUserPlus, FiUsers, FiMessageCircle, FiBookOpen, FiPlus, FiTrash2, FiUpload, FiGift, FiVideo } from "react-icons/fi";
 import api from "../services/api";
 import { FaWhatsapp } from "react-icons/fa";
 import MetricCard from "../components/MetricCard";
@@ -99,80 +99,253 @@ function StatusBadge({ children, tone = "neutral" }) {
   return <span className={`status-badge ${tone}`}>{children}</span>;
 }
 
+function AdminSummaryKpi({ icon, label, value, note, tone = "brand" }) {
+  return (
+    <article className={`admin-summary-kpi tone-${tone}`}>
+      <div className="admin-summary-kpi-icon" aria-hidden="true">{icon}</div>
+      <div className="admin-summary-kpi-copy">
+        <span>{label}</span>
+        <strong>{value}</strong>
+        {note && <small>{note}</small>}
+      </div>
+    </article>
+  );
+}
+
 function AdminHeader({ activeTab, setActiveTab, onRefresh, loading }) {
   const navigate = useNavigate();
-  const changeTab = (key) => { setActiveTab(key); navigate(key === "overview" ? "/admin" : `/admin/${key}`); };
+  const changeTab = (key) => {
+    setActiveTab(key);
+    navigate(key === "overview" ? "/admin" : `/admin/${key}`);
+  };
+
   return (
-    <div className="page-stack">
-      <div className="page-header-card admin-main-header">
+    <div className="admin-header-stack">
+      <header className="admin-workspace-header">
         <div>
           <span className="eyebrow">Panel administrativo</span>
-          <h2>Royal Imperial AI Admin</h2>
-          <p>Gestiona usuarios, niveles, tareas IA, recargas, retiros, soporte, noticias y seguridad desde un panel organizado.</p>
+          <h1>Royal Imperial AI</h1>
+          <p>Control general de usuarios, actividad financiera y operación de la plataforma.</p>
         </div>
-        <button className="secondary-btn" type="button" onClick={onRefresh} disabled={loading}><FiRefreshCw /> Actualizar</button>
-      </div>
-      <div className="admin-tabs">
+        <div className="admin-header-actions">
+          <button className="admin-user-mode-button" type="button" onClick={() => navigate("/home")}>
+            <FiUser />
+            <span>Modo usuario</span>
+          </button>
+          <button className="admin-refresh-button" type="button" onClick={onRefresh} disabled={loading}>
+            <FiRefreshCw className={loading ? "is-spinning" : ""} />
+            <span>{loading ? "Actualizando" : "Actualizar"}</span>
+          </button>
+        </div>
+      </header>
+
+      <nav className="admin-tabs" aria-label="Secciones administrativas">
         {tabs.map((tab) => (
-          <button key={tab.key} type="button" className={activeTab === tab.key ? "active" : ""} onClick={() => changeTab(tab.key)}>
-            {tab.icon}<span>{tab.label}</span>
+          <button
+            key={tab.key}
+            type="button"
+            className={activeTab === tab.key ? "active" : ""}
+            onClick={() => changeTab(tab.key)}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
           </button>
         ))}
-      </div>
+      </nav>
     </div>
   );
 }
 
 function OverviewPanel({ data }) {
   const s = data?.stats || {};
+  const levels = data?.levels || [];
+  const maxLevelUsers = Math.max(1, ...levels.map((level) => Number(level.activeUsers || 0)));
+
   return (
-    <div className="page-stack">
-      <div className="metric-grid admin-metrics">
-        <MetricCard icon={<FiUsers />} label="Usuarios" value={compact(s.users?.total_users)} note={`+${compact(s.users?.new_users_7d)} últimos 7 días`} />
-        <MetricCard icon={<FiCreditCard />} label="Recargado" value={money(s.deposits?.totalDeposited)} note={`${compact(s.deposits?.deposits24h)} recargas en 24h`} />
-        <MetricCard icon={<FiDollarSign />} label="Pendiente retirar" value={money(s.withdrawals?.pendingAmount)} note={`${compact(s.withdrawals?.pendingWithdrawals)} solicitudes pendientes`} />
-        <MetricCard icon={<FiActivity />} label="Tareas semana" value={compact(s.tasks?.weekResponses)} note={`${s.tasks?.weekAccuracy || 0}% precisión semanal`} />
-      </div>
-
-      <div className="two-columns admin-two">
-        <div className="panel-card">
-          <div className="section-title"><span>Distribución</span><h3>Niveles activos</h3></div>
-          <div className="admin-level-bars">
-            {(data?.levels || []).map((level) => (
-              <div key={level.level}>
-                <div><strong>Nivel {level.level} · {level.name}</strong><span>{compact(level.activeUsers)} usuarios</span></div>
-                <div className="bar-track"><i style={{ width: `${Math.min(100, (Number(level.activeUsers || 0) / Math.max(1, Math.max(...(data?.levels || []).map((l) => Number(l.activeUsers || 0))))) * 100)}%` }} /></div>
-              </div>
-            ))}
+    <div className="admin-overview">
+      <section className="admin-overview-section">
+        <div className="admin-section-heading">
+          <div>
+            <span>Usuarios</span>
+            <h2>Registro de la comunidad</h2>
           </div>
+          <small>Cortes calculados en GMT-5</small>
         </div>
-        <div className="panel-card">
-          <div className="section-title"><span>Estado operativo</span><h3>Alertas rápidas</h3></div>
-          <div className="admin-alert-grid">
-            <div><FiShield /><strong>{compact(s.users?.suspicious_users)}</strong><span>Usuarios sospechosos</span></div>
-            <div><FiAlertTriangle /><strong>{compact(s.users?.banned_users)}</strong><span>Usuarios baneados</span></div>
-            <div><FiDatabase /><strong>{compact(s.deposits?.pendingCollection)}</strong><span>Recargas por recolectar</span></div>
-            <div><FiCheckCircle /><strong>{compact(s.tasks?.activeQuestions)}</strong><span>Preguntas activas</span></div>
-          </div>
-        </div>
-      </div>
-
-      <div className="two-columns admin-two">
-        <div className="panel-card">
-          <div className="section-title"><span>Recientes</span><h3>Últimos usuarios</h3></div>
-          <AdminTable
-            columns={[{ key: "email", label: "Usuario" }, { key: "created_at", label: "Registro", render: (r) => shortDate(r.created_at) }, { key: "withdrawable_usdt", label: "Retirable", render: (r) => money(r.withdrawable_usdt) }]}
-            rows={data?.recent?.users || []}
+        <div className="admin-summary-grid grid-three">
+          <AdminSummaryKpi
+            icon={<FiUsers />}
+            label="Usuarios totales"
+            value={compact(s.users?.total_users)}
+            note={`${compact(s.users?.total_admins)} administradores incluidos`}
+          />
+          <AdminSummaryKpi
+            icon={<FiUserPlus />}
+            label="Registros últimos 7 días"
+            value={compact(s.users?.new_users_7d)}
+            note="Ventana móvil de siete días"
+            tone="success"
+          />
+          <AdminSummaryKpi
+            icon={<FiUserPlus />}
+            label="Registrados ayer"
+            value={compact(s.users?.new_users_yesterday)}
+            note="Día calendario anterior"
+            tone="gold"
           />
         </div>
-        <div className="panel-card">
-          <div className="section-title"><span>Recientes</span><h3>Últimos retiros</h3></div>
-          <AdminTable
-            columns={[{ key: "email", label: "Usuario" }, { key: "amount_to_receive", label: "Recibe", render: (r) => money(r.amount_to_receive) }, { key: "status", label: "Estado", render: (r) => <StatusBadge tone={r.status === "paid" ? "success" : "warning"}>{r.status}</StatusBadge> }]}
-            rows={data?.recent?.withdrawals || []}
+      </section>
+
+      <section className="admin-overview-section">
+        <div className="admin-section-heading">
+          <div>
+            <span>Finanzas</span>
+            <h2>Recargas y retiros confirmados</h2>
+          </div>
+          <small>Incluye recargas confirmadas y créditos manuales de administrador</small>
+        </div>
+        <div className="admin-summary-grid grid-finance">
+          <AdminSummaryKpi
+            icon={<FiCreditCard />}
+            label="Recargado total"
+            value={money(s.deposits?.totalDeposited)}
+            note={`${compact(s.deposits?.totalDeposits)} operaciones`}
+          />
+          <AdminSummaryKpi
+            icon={<FiCreditCard />}
+            label="Recargado últimos 7 días"
+            value={money(s.deposits?.deposited7d)}
+            note={`${compact(s.deposits?.deposits7d)} operaciones`}
+            tone="success"
+          />
+          <AdminSummaryKpi
+            icon={<FiCreditCard />}
+            label="Recargado ayer"
+            value={money(s.deposits?.depositedYesterday)}
+            note={`${compact(s.deposits?.depositsYesterday)} operaciones`}
+            tone="gold"
+          />
+          <AdminSummaryKpi
+            icon={<FiDollarSign />}
+            label="Total retirado"
+            value={money(s.withdrawals?.totalPaid)}
+            note={`${compact(s.withdrawals?.paidWithdrawals)} retiros pagados`}
+            tone="danger"
+          />
+          <AdminSummaryKpi
+            icon={<FiDollarSign />}
+            label="Retirado últimos 7 días"
+            value={money(s.withdrawals?.paid7d)}
+            note={`${compact(s.withdrawals?.paidWithdrawals7d)} retiros pagados`}
+            tone="danger"
           />
         </div>
-      </div>
+      </section>
+
+      <section className="admin-overview-section">
+        <div className="admin-section-heading">
+          <div>
+            <span>Actividad</span>
+            <h2>Usuarios que entrenan la IA</h2>
+          </div>
+          <small>Usuarios únicos con al menos una respuesta en los últimos 7 días</small>
+        </div>
+        <div className="admin-summary-grid grid-three">
+          <AdminSummaryKpi
+            icon={<FiActivity />}
+            label="Pasantía activa"
+            value={compact(s.activity?.trialActiveUsers7d)}
+            note={`${compact(s.activity?.trialResponses7d)} respuestas realizadas`}
+          />
+          <AdminSummaryKpi
+            icon={<FiCheckCircle />}
+            label="Miembros con plan activos"
+            value={compact(s.activity?.planActiveUsers7d)}
+            note={`${compact(s.activity?.planResponses7d)} respuestas realizadas`}
+            tone="success"
+          />
+          <AdminSummaryKpi
+            icon={<FiArrowUpCircle />}
+            label="Usuarios que hicieron upgrade"
+            value={compact(s.upgrades?.totalUpgradeUsers)}
+            note={`${compact(s.upgrades?.upgradeUsers7d)} en los últimos 7 días`}
+            tone="gold"
+          />
+        </div>
+      </section>
+
+      <section className="admin-overview-split">
+        <div className="admin-overview-panel admin-level-panel">
+          <div className="admin-section-heading compact-heading">
+            <div>
+              <span>Distribución</span>
+              <h2>Miembros por nivel activo</h2>
+            </div>
+            <small>{compact(s.users?.total_users)} usuarios registrados</small>
+          </div>
+
+          <div className="admin-level-bars admin-level-bars-large">
+            {levels.length ? levels.map((level) => {
+              const activeUsers = Number(level.activeUsers || 0);
+              const width = activeUsers > 0 ? Math.max(2, Math.min(100, (activeUsers / maxLevelUsers) * 100)) : 0;
+              return (
+                <div className={`admin-level-row ${activeUsers === 0 ? "is-empty" : ""}`} key={level.level}>
+                  <div className="admin-level-row-head">
+                    <strong>{level.level === 0 ? "Pasantía" : `R${level.level}`}</strong>
+                    <span>{compact(activeUsers)} usuarios</span>
+                  </div>
+                  <div className="admin-level-track" aria-label={`${activeUsers} usuarios en ${level.name}`}>
+                    {activeUsers > 0 && <i style={{ width: `${width}%` }} />}
+                  </div>
+                  <small>{level.name}</small>
+                </div>
+              );
+            }) : <p className="admin-empty-message">No hay información de niveles disponible.</p>}
+          </div>
+        </div>
+
+        <div className="admin-overview-panel admin-operational-panel">
+          <div className="admin-section-heading compact-heading">
+            <div>
+              <span>Estado operativo</span>
+              <h2>Control rápido</h2>
+            </div>
+            <small>Indicadores que necesitan supervisión</small>
+          </div>
+
+          <div className="admin-operational-grid">
+            <div>
+              <FiShield />
+              <strong>{compact(s.users?.suspicious_users)}</strong>
+              <span>Usuarios sospechosos</span>
+            </div>
+            <div>
+              <FiAlertTriangle />
+              <strong>{compact(s.users?.banned_users)}</strong>
+              <span>Usuarios baneados</span>
+            </div>
+            <div>
+              <FiDatabase />
+              <strong>{compact(s.deposits?.pendingCollection)}</strong>
+              <span>Recargas por recolectar</span>
+            </div>
+            <div>
+              <FiDollarSign />
+              <strong>{compact(s.withdrawals?.pendingWithdrawals)}</strong>
+              <span>Retiros pendientes</span>
+            </div>
+            <div>
+              <FiCheckCircle />
+              <strong>{compact(s.tasks?.activeQuestions)}</strong>
+              <span>Preguntas IA activas</span>
+            </div>
+            <div>
+              <FiActivity />
+              <strong>{Number(s.activity?.accuracy7d || 0).toFixed(2)}%</strong>
+              <span>Precisión últimos 7 días</span>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

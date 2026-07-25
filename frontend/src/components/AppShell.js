@@ -32,6 +32,7 @@ export default function AppShell({ children }) {
   const user = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
   }, []);
+  const isAdminRoute = Boolean(user?.is_admin && location.pathname.startsWith("/admin"));
   const adminNavItem = useMemo(() => ({ to: "/admin", label: "Admin", icon: <FiSettings /> }), []);
   const navItems = useMemo(() => (user?.is_admin ? [...mainNavItems, adminNavItem] : mainNavItems), [user?.is_admin, adminNavItem]);
   const walletLinks = useMemo(() => [
@@ -109,8 +110,8 @@ export default function AppShell({ children }) {
 
 
   return (
-    <div className={`app-shell ${user?.is_admin && adminMobilePreview ? "admin-mobile-preview" : ""}`}>
-      {user?.is_admin && adminMobilePreview && (
+    <div className={`app-shell ${!isAdminRoute && user?.is_admin && adminMobilePreview ? "admin-mobile-preview" : ""} ${isAdminRoute ? "admin-workspace-shell" : ""}`}>
+      {!isAdminRoute && user?.is_admin && adminMobilePreview && (
         <>
           <div className="admin-preview-badge">Xiaomi Redmi Note 13 Pro 5G · Vista 393×873</div>
           <button
@@ -124,18 +125,20 @@ export default function AppShell({ children }) {
           </button>
         </>
       )}
-      <aside className="sidebar sidebar-minimal">
-        <BrandLogo />
-        <nav className="side-nav side-nav-minimal">
-          {navItems.map((item) => (
-            <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? "active" : ""}>
-              {item.icon}<span>{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
+      {!isAdminRoute && (
+        <aside className="sidebar sidebar-minimal">
+          <BrandLogo />
+          <nav className="side-nav side-nav-minimal">
+            {navItems.map((item) => (
+              <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? "active" : ""}>
+                {item.icon}<span>{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+        </aside>
+      )}
       <main className="main-panel">
-        <header className="topbar">
+        {!isAdminRoute && <header className="topbar">
           <div className="topbar-title topbar-brand-lockup">
             <div className="brand-title-line">
               <img src="/royal-icon.svg" alt="Royal Imperial AI" />
@@ -165,10 +168,10 @@ export default function AppShell({ children }) {
             <ThemeToggle theme={theme} setTheme={setTheme} />
             <button className="icon-btn" type="button" onClick={logout} title="Cerrar sesión"><FiLogOut /></button>
           </div>
-        </header>
+        </header>}
         <div className="content-area">{children}</div>
       </main>
-      <div className="bonus-floating-shortcuts" aria-label="Bonos rápidos">
+      {!isAdminRoute && <div className="bonus-floating-shortcuts" aria-label="Bonos rápidos">
         {!location.pathname.startsWith('/bonus/checkin') && (
           <button type="button" className="bonus-float-btn" onClick={() => navigate('/bonus/checkin')} title="Abrir check-in">
             <img src={iconBonusCheckin} alt="Check-in" />
@@ -179,8 +182,8 @@ export default function AppShell({ children }) {
             <img src={iconBonusTasks} alt="Tareas" />
           </button>
         )}
-      </div>
-      <nav className="mobile-nav mobile-nav-compact" aria-label="Navegación móvil">
+      </div>}
+      {!isAdminRoute && <nav className="mobile-nav mobile-nav-compact" aria-label="Navegación móvil">
         <NavLink to="/home" className={({ isActive }) => isActive ? "active" : ""}>
           <FiGrid /><span>Inicio</span>
         </NavLink>
@@ -193,8 +196,8 @@ export default function AppShell({ children }) {
         <button type="button" className={menuActive || mobilePanel === "menu" ? "active" : ""} onClick={() => setMobilePanel((p) => p === "menu" ? null : "menu")}>
           <FiMenu /><span>Menú</span>
         </button>
-      </nav>
-      {mobilePanel && (
+      </nav>}
+      {!isAdminRoute && mobilePanel && (
         <div className="mobile-panel-backdrop" onClick={() => setMobilePanel(null)}>
           <section className="mobile-panel-card" onClick={(e) => e.stopPropagation()}>
             <div className="mobile-panel-head">
