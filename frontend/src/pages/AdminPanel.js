@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FiActivity, FiAlertTriangle, FiArrowUpCircle, FiAward, FiBarChart2, FiCheckCircle, FiCopy, FiCreditCard, FiDatabase, FiDollarSign, FiEdit3, FiExternalLink, FiFilter, FiRefreshCw, FiSearch, FiShield, FiSliders, FiUser, FiUserPlus, FiUsers, FiMessageCircle, FiBookOpen, FiPlus, FiTrash2, FiUpload, FiGift, FiVideo } from "react-icons/fi";
+import { FiActivity, FiAlertTriangle, FiArrowUpCircle, FiAward, FiBarChart2, FiCheckCircle, FiCopy, FiCreditCard, FiDatabase, FiDollarSign, FiEdit3, FiExternalLink, FiFilter, FiRefreshCw, FiSearch, FiShield, FiSliders, FiUser, FiUserPlus, FiUsers, FiMessageCircle, FiBookOpen, FiPlus, FiTrash2, FiUpload, FiGift, FiVideo, FiSave, FiX, FiKey, FiLogOut } from "react-icons/fi";
 import api from "../services/api";
 import { FaWhatsapp } from "react-icons/fa";
 import MetricCard from "../components/MetricCard";
@@ -352,67 +352,106 @@ function OverviewPanel({ data }) {
 
 function UsersPanel() {
   const [rows, setRows] = useState([]);
-  const [pagination, setPagination] = useState({ page: 1, total: 0, limit: 25 });
+  const [pagination, setPagination] = useState({ page: 1, total: 0, limit: 20 });
   const [filters, setFilters] = useState({ search: "", status: "all", level: "" });
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const load = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page, limit: 25, search: filters.search, status: filters.status, level: filters.level });
+      const params = new URLSearchParams({ page, limit: 20, search: filters.search, status: filters.status, level: filters.level });
       const res = await api.get(`/admin/users?${params.toString()}`);
       setRows(res.data.users || []);
-      setPagination(res.data.pagination || { page, total: 0, limit: 25 });
-    } finally { setLoading(false); }
+      setPagination(res.data.pagination || { page, total: 0, limit: 20 });
+    } finally {
+      setLoading(false);
+    }
   }, [filters]);
 
   useEffect(() => { load(1).catch(() => {}); }, [load]);
 
   const openDetail = async (userId) => {
-    const res = await api.get(`/admin/users/${userId}`);
-    setDetail(res.data);
-  };
-  const updateFlag = async (user, patch) => {
-    await api.patch(`/admin/users/${user.id}`, patch);
-    await load(pagination.page);
-    if (detail?.user?.id === user.id) await openDetail(user.id);
+    setDetailLoading(true);
+    try {
+      const res = await api.get(`/admin/users/${userId}`);
+      setDetail(res.data);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const refreshDetailAndList = async () => {
-    if (detail?.user?.id) await openDetail(detail.user.id);
+    const userId = detail?.user?.id;
+    if (userId) {
+      const res = await api.get(`/admin/users/${userId}`);
+      setDetail(res.data);
+    }
     await load(pagination.page);
   };
 
+  const levelName = (level) => Number(level || 0) > 0 ? `R${Number(level)}` : "Pasantía";
+
   return (
-    <div className="page-stack">
-      <div className="admin-filter-card panel-card">
-        <div className="filter-title"><FiFilter /><strong>Filtros de usuarios</strong></div>
-        <div className="admin-filters">
-          <label><span>Buscar correo o ID</span><input value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))} placeholder="correo@dominio.com o ID de usuario" /></label>
-          <label><span>Estado</span><select value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}><option value="all">Todos</option><option value="normal">Normal</option><option value="admin">Admin</option><option value="suspicious">Sospechoso</option><option value="banned">Baneado</option></select></label>
-          <label><span>Nivel</span><select value={filters.level} onChange={(e) => setFilters((f) => ({ ...f, level: e.target.value }))}><option value="">Todos</option>{Array.from({ length: 9 }).map((_, i) => <option key={i} value={i}>{i === 0 ? "Nivel 0 · Pasantía" : `Nivel ${i}`}</option>)}</select></label>
-          <button className="primary-btn" type="button" onClick={() => load(1)} disabled={loading}><FiSearch /> Buscar</button>
+    <div className="admin-users-page">
+      <section className="admin-users-toolbar">
+        <div className="admin-section-heading admin-users-heading">
+          <div>
+            <span>Gestión de cuentas</span>
+            <h2>Usuarios</h2>
+          </div>
+          <small>{compact(pagination.total)} usuarios encontrados</small>
         </div>
-      </div>
-      <div className="panel-card">
-        <div className="section-title"><span>Usuarios</span><h3>{compact(pagination.total)} cuentas encontradas</h3></div>
-        <AdminTable
-          rows={rows}
-          columns={[
-            { key: "id", label: "ID", render: (r) => <button className="link-btn" onClick={() => openDetail(r.id)}>#{r.id}</button> },
-            { key: "email", label: "Usuario", render: (r) => <button className="link-btn" onClick={() => openDetail(r.id)}>{r.email}</button> },
-            { key: "active_level", label: "Nivel", render: (r) => r.active_level ? `Nivel ${r.active_level}` : "Sin nivel" },
-            { key: "withdrawable_usdt", label: "Retirable", render: (r) => money(r.withdrawable_usdt) },
-            { key: "week_accuracy", label: "Precisión", render: (r) => `${r.week_accuracy || 0}%` },
-            { key: "week_responses", label: "Tareas semana" },
-            { key: "direct_count", label: "Directos" },
-            { key: "status", label: "Estado", render: (r) => <div className="badge-row">{r.is_admin && <StatusBadge>Admin</StatusBadge>}{r.is_suspicious && <StatusBadge tone="warning">Sospechoso</StatusBadge>}{r.is_banned && <StatusBadge tone="danger">Baneado</StatusBadge>}{!r.is_admin && !r.is_suspicious && !r.is_banned && <StatusBadge tone="success">Normal</StatusBadge>}</div> },
-            { key: "actions", label: "Acciones", render: (r) => <div className="table-actions"><button onClick={() => updateFlag(r, { isSuspicious: !r.is_suspicious, suspiciousReason: r.is_suspicious ? "" : "Marcado desde panel admin" })}>{r.is_suspicious ? "Quitar alerta" : "Marcar"}</button><button onClick={() => updateFlag(r, { isBanned: !r.is_banned, bannedReason: r.is_banned ? "" : "Bloqueado desde panel admin" })}>{r.is_banned ? "Desbanear" : "Banear"}</button></div> },
-          ]}
-        />
-        <div className="pagination-row"><button className="secondary-btn" onClick={() => load(Math.max(1, pagination.page - 1))} disabled={pagination.page <= 1}>Anterior</button><span>Página {pagination.page}</span><button className="secondary-btn" onClick={() => load(pagination.page + 1)} disabled={pagination.page * pagination.limit >= pagination.total}>Siguiente</button></div>
-      </div>
+
+        <div className="admin-users-filters">
+          <label className="admin-users-search">
+            <span>Buscar por correo o ID</span>
+            <div><FiSearch /><input value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") load(1); }} placeholder="correo@dominio.com o ID" /></div>
+          </label>
+          <label><span>Estado</span><select value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}><option value="all">Todos</option><option value="normal">Normal</option><option value="admin">Administrador</option><option value="suspicious">Sospechoso</option><option value="banned">Baneado</option></select></label>
+          <label><span>Nivel</span><select value={filters.level} onChange={(e) => setFilters((f) => ({ ...f, level: e.target.value }))}><option value="">Todos</option>{Array.from({ length: 9 }).map((_, i) => <option key={i} value={i}>{i === 0 ? "Pasantía" : `R${i}`}</option>)}</select></label>
+          <button className="admin-users-search-button" type="button" onClick={() => load(1)} disabled={loading}><FiSearch /> {loading ? "Buscando" : "Buscar"}</button>
+        </div>
+      </section>
+
+      <section className="admin-users-list-panel">
+        <div className="admin-users-desktop-table">
+          <table className="admin-users-table">
+            <thead><tr><th>#</th><th>ID</th><th>Correo</th><th>Nivel</th><th>Saldo retirable</th><th>Invitados</th><th>Estado</th><th>Opciones</th></tr></thead>
+            <tbody>
+              {rows.length ? rows.map((row, index) => (
+                <tr key={row.id}>
+                  <td>{(pagination.page - 1) * pagination.limit + index + 1}</td>
+                  <td><strong>#{row.id}</strong></td>
+                  <td><button type="button" className="admin-user-email-link" onClick={() => openDetail(row.id)}>{row.email}</button></td>
+                  <td><span className={`admin-level-pill level-${Number(row.active_level || 0)}`}>{levelName(row.active_level)}</span></td>
+                  <td><strong>{money(row.withdrawable_usdt)}</strong></td>
+                  <td>{compact(row.direct_count)}</td>
+                  <td><div className="admin-user-statuses">{row.is_admin && <StatusBadge>Admin</StatusBadge>}{row.is_suspicious && <StatusBadge tone="warning">Sospechoso</StatusBadge>}{row.is_banned && <StatusBadge tone="danger">Baneado</StatusBadge>}{!row.is_admin && !row.is_suspicious && !row.is_banned && <StatusBadge tone="success">Normal</StatusBadge>}</div></td>
+                  <td><button className="admin-edit-user-button" type="button" onClick={() => openDetail(row.id)}><FiEdit3 /> Editar</button></td>
+                </tr>
+              )) : <tr><td colSpan="8" className="empty-cell">No se encontraron usuarios.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="admin-users-mobile-list">
+          {rows.map((row, index) => (
+            <article key={row.id} className="admin-user-mobile-card">
+              <div className="admin-user-mobile-top"><span>#{(pagination.page - 1) * pagination.limit + index + 1}</span><strong>ID {row.id}</strong><span className={`admin-level-pill level-${Number(row.active_level || 0)}`}>{levelName(row.active_level)}</span></div>
+              <button type="button" className="admin-user-mobile-email" onClick={() => openDetail(row.id)}>{row.email}</button>
+              <div className="admin-user-mobile-data"><div><small>Retirable</small><strong>{money(row.withdrawable_usdt)}</strong></div><div><small>Invitados</small><strong>{compact(row.direct_count)}</strong></div></div>
+              <div className="admin-user-mobile-bottom"><div className="admin-user-statuses">{row.is_suspicious && <StatusBadge tone="warning">Sospechoso</StatusBadge>}{row.is_banned && <StatusBadge tone="danger">Baneado</StatusBadge>}{!row.is_suspicious && !row.is_banned && <StatusBadge tone="success">Normal</StatusBadge>}</div><button type="button" onClick={() => openDetail(row.id)}><FiEdit3 /> Editar</button></div>
+            </article>
+          ))}
+          {!rows.length && <div className="admin-users-empty">No se encontraron usuarios.</div>}
+        </div>
+
+        <PaginationControls page={pagination.page} total={pagination.total} limit={pagination.limit} onPageChange={load} loading={loading} />
+      </section>
+
+      {detailLoading && <div className="admin-detail-loading"><FiRefreshCw className="is-spinning" /> Cargando usuario...</div>}
       {detail && <UserDetailModal detail={detail} onClose={() => setDetail(null)} onChanged={refreshDetailAndList} />}
     </div>
   );
@@ -420,170 +459,209 @@ function UsersPanel() {
 
 function UserDetailModal({ detail, onClose, onChanged }) {
   const u = detail.user || {};
-  const [adjustForm, setAdjustForm] = useState({ balanceType: "recharge", direction: "credit", amountUsdt: "", reason: "" });
-  const [adjustMessage, setAdjustMessage] = useState("");
-  const [adjustError, setAdjustError] = useState("");
-  const [adjusting, setAdjusting] = useState(false);
-  const [validationForm, setValidationForm] = useState({ withdrawEnabled: Boolean(u.withdraw_enabled), withdrawEnabledNote: u.withdraw_enabled_note || "" });
-  const [validationMessage, setValidationMessage] = useState("");
+  const [section, setSection] = useState("account");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [profileForm, setProfileForm] = useState({ fullName: "", phoneCountryIso: "", phoneCountryName: "", phoneCountryCode: "", phoneNumber: "" });
+  const [withdrawForm, setWithdrawForm] = useState({ withdrawEnabled: false, withdrawEnabledNote: "" });
+  const [accountForm, setAccountForm] = useState({ id: null, network: "BEP20-USDT", label: "", withdrawalAddress: "", isDefault: false });
+  const [balanceForm, setBalanceForm] = useState({ balanceType: "withdrawable", direction: "credit", amountUsdt: "", reason: "" });
   const [rouletteForm, setRouletteForm] = useState({ operation: "add", points: "", reason: "" });
-  const [rouletteMessage, setRouletteMessage] = useState("");
-  const [rouletteError, setRouletteError] = useState("");
-  const [copyMessage, setCopyMessage] = useState("");
+  const [creditForm, setCreditForm] = useState({ operation: "add", points: "", reason: "" });
+  const [passwordForm, setPasswordForm] = useState({ newPassword: "", confirmPassword: "" });
+  const [securityForm, setSecurityForm] = useState({ suspiciousReason: u.suspicious_reason || "", bannedReason: u.banned_reason || "" });
+  const [activityType, setActivityType] = useState("ledger");
+  const [activity, setActivity] = useState({ rows: [], pagination: { page: 1, total: 0, limit: 10 } });
+  const [activityLoading, setActivityLoading] = useState(false);
 
-  const copyToClipboard = async (value, label = "Dato") => {
-    if (!value) return;
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopyMessage(`${label} copiado.`);
-      window.clearTimeout(window.__royalAdminWalletCopyTimer);
-      window.__royalAdminWalletCopyTimer = window.setTimeout(() => setCopyMessage(""), 1600);
-    } catch (_) {
-      setCopyMessage("No se pudo copiar. Copia manualmente la dirección.");
-    }
+  useEffect(() => {
+    setProfileForm({ fullName: u.full_name || "", phoneCountryIso: u.phone_country_iso || "", phoneCountryName: u.phone_country_name || "", phoneCountryCode: u.phone_country_code || "", phoneNumber: u.phone_number || "" });
+    setWithdrawForm({ withdrawEnabled: Boolean(u.withdraw_enabled), withdrawEnabledNote: u.withdraw_enabled_note || "" });
+    setSecurityForm({ suspiciousReason: u.suspicious_reason || "", bannedReason: u.banned_reason || "" });
+  }, [u.id, u.full_name, u.phone_country_iso, u.phone_country_name, u.phone_country_code, u.phone_number, u.withdraw_enabled, u.withdraw_enabled_note, u.suspicious_reason, u.banned_reason]);
+
+  const showResult = (okMessage = "") => {
+    setError("");
+    setMessage(okMessage);
+    window.setTimeout(() => setMessage(""), 2600);
+  };
+  const handleError = (err, fallback) => {
+    setMessage("");
+    setError(err?.message || fallback);
+  };
+  const runAction = async (action, okMessage) => {
+    setBusy(true); setError(""); setMessage("");
+    try { await action(); showResult(okMessage); if (onChanged) await onChanged(); }
+    catch (err) { handleError(err, "No se pudo completar la acción."); }
+    finally { setBusy(false); }
   };
 
-  const submitBalanceAdjustment = async (e) => {
-    e.preventDefault();
-    setAdjustMessage("");
-    setAdjustError("");
-    setAdjusting(true);
+  const copyValue = async (value) => {
+    try { await navigator.clipboard.writeText(value); showResult("Dirección copiada."); }
+    catch (_) { setError("No se pudo copiar automáticamente."); }
+  };
+
+  const loadActivity = useCallback(async (type = activityType, page = 1) => {
+    setActivityLoading(true);
     try {
-      await api.post(`/admin/users/${u.id}/balance`, adjustForm);
-      setAdjustMessage(adjustForm.direction === "credit" ? "Saldo añadido correctamente." : "Saldo descontado correctamente.");
-      setAdjustForm((f) => ({ ...f, amountUsdt: "", reason: "" }));
-      if (onChanged) await onChanged();
+      const res = await api.get(`/admin/users/${u.id}/activity?type=${type}&page=${page}&limit=10`);
+      setActivity(res.data || { rows: [], pagination: { page, total: 0, limit: 10 } });
     } catch (err) {
-      setAdjustError(err.response?.data?.message || "No se pudo ajustar el saldo.");
-    } finally {
-      setAdjusting(false);
-    }
-  };
+      handleError(err, "No se pudo cargar el historial.");
+    } finally { setActivityLoading(false); }
+  }, [u.id, activityType]);
 
-  const saveWithdrawValidation = async () => {
-    setValidationMessage("");
-    await api.patch(`/admin/users/${u.id}`, {
-      withdrawEnabled: validationForm.withdrawEnabled,
-      withdrawEnabledNote: validationForm.withdrawEnabledNote,
-    });
-    setValidationMessage(validationForm.withdrawEnabled ? "Usuario habilitado para retiros." : "Validación de retiro desactivada.");
-    if (onChanged) await onChanged();
-  };
+  useEffect(() => { if (section === "activity") loadActivity(activityType, 1); }, [section, activityType, loadActivity]);
 
-  const submitRoulettePoints = async (e) => {
+  const saveProfile = (e) => { e.preventDefault(); runAction(() => api.patch(`/admin/users/${u.id}/profile`, profileForm), "Datos personales guardados."); };
+  const saveWithdraw = (e) => { e.preventDefault(); runAction(() => api.patch(`/admin/users/${u.id}`, withdrawForm), withdrawForm.withdrawEnabled ? "Retiros habilitados." : "Retiros deshabilitados."); };
+  const saveWithdrawalAccount = (e) => {
     e.preventDefault();
-    setRouletteMessage("");
-    setRouletteError("");
-    try {
-      await api.post(`/admin/users/${u.id}/roulette-points`, rouletteForm);
-      setRouletteMessage("Puntos de giro actualizados.");
-      setRouletteForm((f) => ({ ...f, points: "", reason: "" }));
-      if (onChanged) await onChanged();
-    } catch (err) {
-      setRouletteError(err.response?.data?.message || "No se pudo ajustar puntos de giro.");
-    }
+    const url = accountForm.id ? `/admin/users/${u.id}/withdrawal-accounts/${accountForm.id}` : `/admin/users/${u.id}/withdrawal-accounts`;
+    const method = accountForm.id ? "patch" : "post";
+    runAction(() => api[method](url, accountForm), accountForm.id ? "Cuenta de retiro actualizada." : "Cuenta de retiro añadida.").then(() => setAccountForm({ id: null, network: "BEP20-USDT", label: "", withdrawalAddress: "", isDefault: false }));
+  };
+  const editWithdrawalAccount = (account) => { setAccountForm({ id: account.id, network: account.network, label: account.label || "", withdrawalAddress: account.withdrawal_address || "", isDefault: Boolean(account.is_default) }); };
+  const deleteWithdrawalAccount = (account) => {
+    if (!window.confirm(`¿Eliminar la cuenta ${account.network}?`)) return;
+    runAction(() => api.delete(`/admin/users/${u.id}/withdrawal-accounts/${account.id}`), "Cuenta eliminada.");
+  };
+  const submitBalance = (e) => { e.preventDefault(); runAction(() => api.post(`/admin/users/${u.id}/balance`, balanceForm), "Saldo actualizado.").then(() => setBalanceForm((f) => ({ ...f, amountUsdt: "", reason: "" }))); };
+  const submitRoulette = (e) => { e.preventDefault(); runAction(() => api.post(`/admin/users/${u.id}/roulette-points`, rouletteForm), "Giros actualizados.").then(() => setRouletteForm((f) => ({ ...f, points: "", reason: "" }))); };
+  const submitCredit = (e) => { e.preventDefault(); runAction(() => api.post(`/admin/users/${u.id}/credit-points`, creditForm), "Puntos de crédito actualizados.").then(() => setCreditForm((f) => ({ ...f, points: "", reason: "" }))); };
+  const resetPassword = (e) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) { setError("Las contraseñas no coinciden."); return; }
+    runAction(() => api.post(`/admin/users/${u.id}/reset-password`, { newPassword: passwordForm.newPassword }), "Contraseña cambiada y sesiones cerradas.").then(() => setPasswordForm({ newPassword: "", confirmPassword: "" }));
+  };
+  const forceLogout = () => { if (window.confirm("¿Cerrar todas las sesiones activas de este usuario?")) runAction(() => api.post(`/admin/users/${u.id}/force-logout`), "Sesiones cerradas."); };
+  const toggleSuspicious = () => runAction(() => api.patch(`/admin/users/${u.id}`, { isSuspicious: !u.is_suspicious, suspiciousReason: !u.is_suspicious ? securityForm.suspiciousReason || "Marcado para revisión por administrador." : "" }), u.is_suspicious ? "Alerta retirada." : "Usuario marcado como sospechoso.");
+  const toggleBan = () => { if (!u.is_banned && !window.confirm("¿Banear esta cuenta? El usuario perderá acceso inmediatamente.")) return; runAction(() => api.patch(`/admin/users/${u.id}`, { isBanned: !u.is_banned, bannedReason: !u.is_banned ? securityForm.bannedReason || "Cuenta bloqueada por administrador." : "" }), u.is_banned ? "Usuario desbaneado." : "Usuario baneado."); };
+
+  const accountSections = [
+    { key: "account", label: "Cuenta", icon: <FiUser /> },
+    { key: "wallets", label: "Wallets", icon: <FiCreditCard /> },
+    { key: "adjustments", label: "Ajustes", icon: <FiSliders /> },
+    { key: "referrals", label: "Invitados", icon: <FiUsers /> },
+    { key: "activity", label: "Actividad", icon: <FiActivity /> },
+    { key: "security", label: "Seguridad", icon: <FiShield /> },
+  ];
+  const levelText = Number(u.active_level || 0) > 0 ? `R${u.active_level}` : "Pasantía";
+  const personalComplete = Boolean(u.full_name && u.phone_country_code && u.phone_number);
+
+  const renderActivityRows = () => {
+    if (!activity.rows?.length) return <div className="admin-user-empty-state">No hay movimientos para mostrar.</div>;
+    if (activityType === "tasks") return <div className="admin-user-simple-list">{activity.rows.map((r) => <div key={r.id}><div><strong>{r.title}</strong><small>{shortDate(r.created_at)} · {r.asset || r.category}</small></div><div><StatusBadge tone={r.is_correct ? "success" : "warning"}>{r.is_correct ? "Correcta" : "Incorrecta"}</StatusBadge><strong>{money(r.reward_usdt)}</strong></div></div>)}</div>;
+    if (activityType === "deposits") return <div className="admin-user-simple-list">{activity.rows.map((r) => <div key={r.id}><div><strong>Recarga {r.network}</strong><small>{shortDate(r.created_at)} · {r.tx_hash ? shortAddress(r.tx_hash) : "Sin hash"}</small></div><div><StatusBadge tone={r.status === "confirmed" ? "success" : "warning"}>{r.status}</StatusBadge><strong>{money(r.amount_usdt)}</strong></div></div>)}</div>;
+    if (activityType === "withdrawals") return <div className="admin-user-simple-list">{activity.rows.map((r) => <div key={r.id}><div><strong>Retiro {r.network}</strong><small>{shortDate(r.created_at)} · Recibe {money(r.amount_to_receive)}</small></div><div><StatusBadge tone={r.status === "paid" ? "success" : r.status === "rejected" ? "danger" : "warning"}>{r.status}</StatusBadge><strong>{money(r.amount_requested)}</strong></div></div>)}</div>;
+    return <div className="admin-user-simple-list">{activity.rows.map((r) => <div key={r.id}><div><strong>{r.title || r.type}</strong><small>{shortDate(r.created_at)} · {r.balance_type}</small></div><div><StatusBadge tone={r.direction === "credit" ? "success" : "warning"}>{r.direction === "credit" ? "Ingreso" : "Salida"}</StatusBadge><strong>{r.direction === "debit" ? "−" : "+"}{money(r.amount_usdt)}</strong></div></div>)}</div>;
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="admin-modal admin-user-detail-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head"><div><span className="eyebrow">Detalle usuario</span><h3>{u.email}</h3></div><button className="icon-btn" onClick={onClose}>×</button></div>
-        <div className="metric-grid admin-metrics small-grid">
-          <MetricCard icon={<FiDollarSign />} label="Balance" value={money(u.balance_usdt)} />
-          <MetricCard icon={<FiDollarSign />} label="Retirable" value={money(u.withdrawable_usdt)} />
-          <MetricCard icon={<FiCreditCard />} label="Recarga" value={money(u.recharge_balance_usdt)} />
-          <MetricCard icon={<FiActivity />} label="Ganancias" value={money(u.earnings_balance_usdt)} />
-          <MetricCard icon={<FiRefreshCw />} label="Giros" value={u.roulette_points || 0} />
-          <MetricCard icon={<FiAward />} label="Puntos crédito" value={u.credit_points || 50} />
+    <div className="admin-user-editor-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <section className="admin-user-editor" aria-label={`Editar usuario ${u.email}`}>
+        <header className="admin-user-editor-header">
+          <div><span>Editar usuario · ID {u.id}</span><h2>{u.email}</h2><div className="admin-user-editor-badges"><span className={`admin-level-pill level-${Number(u.active_level || 0)}`}>{levelText}</span>{u.is_suspicious && <StatusBadge tone="warning">Sospechoso</StatusBadge>}{u.is_banned && <StatusBadge tone="danger">Baneado</StatusBadge>}{!u.is_suspicious && !u.is_banned && <StatusBadge tone="success">Activo</StatusBadge>}</div></div>
+          <button type="button" className="admin-user-editor-close" onClick={onClose} aria-label="Cerrar"><FiX /></button>
+        </header>
+
+        {(message || error) && <div className={`admin-user-editor-alert ${error ? "error" : "success"}`}>{error || message}</div>}
+
+        <div className="admin-user-editor-kpis">
+          <div><span>Saldo retirable</span><strong>{money(u.withdrawable_usdt)}</strong></div>
+          <div><span>Saldo garantía</span><strong>{money(u.recharge_balance_usdt)}</strong></div>
+          <div><span>Ruletas</span><strong>{compact(u.roulette_points)}</strong></div>
+          <div><span>Puntos crédito</span><strong>{compact(u.credit_points)}</strong></div>
         </div>
 
-        <div className="two-columns admin-two">
-          <div className="panel-card no-shadow admin-user-profile-card">
-            <div className="section-title"><span>Datos personales</span><h3>Contacto</h3></div>
-            <p><strong>Nombre:</strong> {u.full_name || "No registrado"}</p>
-            <p><strong>Celular:</strong> {u.phone_country_code || ""} {u.phone_number || "No registrado"}</p>
-            <p><strong>Estado retiro:</strong> {u.withdraw_enabled ? <StatusBadge tone="success">Habilitado</StatusBadge> : <StatusBadge tone="warning">Pendiente</StatusBadge>}</p>
-          </div>
+        <nav className="admin-user-editor-tabs">{accountSections.map((item) => <button key={item.key} type="button" className={section === item.key ? "active" : ""} onClick={() => setSection(item.key)}>{item.icon}<span>{item.label}</span></button>)}</nav>
 
-          <div className="panel-card no-shadow admin-user-profile-card admin-deposit-wallet-card">
-            <div className="section-title"><span>Wallets de recarga</span><h3>Direcciones asignadas</h3></div>
-            {copyMessage && <div className="admin-copy-note">{copyMessage}</div>}
-            <div className="admin-deposit-wallet-list">
-              {(detail.depositWallets || []).length === 0 && <span className="muted-text">Sin wallets automáticas asignadas.</span>}
-              {(detail.depositWallets || []).map((wallet) => {
-                const explorer = scanUrl(wallet.network, wallet.address);
-                return (
-                  <div className="admin-deposit-wallet-row" key={wallet.id || wallet.network}>
-                    <div>
-                      <strong>{wallet.network}</strong>
-                      <small>{shortAddress(wallet.address)}</small>
-                    </div>
-                    <div className="admin-deposit-wallet-actions">
-                      <button type="button" onClick={() => copyToClipboard(wallet.address, wallet.network)}><FiCopy /> Copiar</button>
-                      {explorer && <a href={explorer} target="_blank" rel="noreferrer"><FiExternalLink /> Scan</a>}
-                    </div>
-                  </div>
-                );
-              })}
+        <div className="admin-user-editor-content">
+          {section === "account" && <div className="admin-user-editor-grid">
+            <form className="admin-user-flat-section" onSubmit={saveProfile}>
+              <div className="admin-user-section-title"><div><span>Datos personales</span><h3>Información de contacto</h3></div><StatusBadge tone={personalComplete ? "success" : "warning"}>{personalComplete ? "Completado" : "Incompleto"}</StatusBadge></div>
+              <div className="admin-user-form-grid"><label className="wide"><span>Nombre completo</span><input value={profileForm.fullName} onChange={(e) => setProfileForm((f) => ({ ...f, fullName: e.target.value }))} placeholder="Nombre y apellidos" /></label><label><span>ISO país</span><input value={profileForm.phoneCountryIso} onChange={(e) => setProfileForm((f) => ({ ...f, phoneCountryIso: e.target.value.toUpperCase() }))} placeholder="PE" /></label><label><span>País</span><input value={profileForm.phoneCountryName} onChange={(e) => setProfileForm((f) => ({ ...f, phoneCountryName: e.target.value }))} placeholder="Perú" /></label><label><span>Prefijo</span><input value={profileForm.phoneCountryCode} onChange={(e) => setProfileForm((f) => ({ ...f, phoneCountryCode: e.target.value }))} placeholder="+51" /></label><label><span>Celular</span><input value={profileForm.phoneNumber} onChange={(e) => setProfileForm((f) => ({ ...f, phoneNumber: e.target.value }))} placeholder="999999999" /></label></div>
+              <button className="admin-user-primary-action" type="submit" disabled={busy}><FiSave /> Guardar datos</button>
+            </form>
+
+            <form className="admin-user-flat-section" onSubmit={saveWithdraw}>
+              <div className="admin-user-section-title"><div><span>Retiros</span><h3>Validación de cuenta</h3></div><StatusBadge tone={u.withdraw_enabled ? "success" : "warning"}>{u.withdraw_enabled ? "Habilitado" : "Deshabilitado"}</StatusBadge></div>
+              <label className="admin-user-switch-row"><input type="checkbox" checked={withdrawForm.withdrawEnabled} onChange={(e) => setWithdrawForm((f) => ({ ...f, withdrawEnabled: e.target.checked }))} /><span><strong>Permitir retiros</strong><small>El usuario podrá solicitar retiros si cumple el resto de condiciones.</small></span></label>
+              <label><span>Nota interna</span><textarea value={withdrawForm.withdrawEnabledNote} onChange={(e) => setWithdrawForm((f) => ({ ...f, withdrawEnabledNote: e.target.value }))} rows="3" placeholder="Validación, observaciones o motivo" /></label>
+              <button className="admin-user-primary-action" type="submit" disabled={busy}><FiSave /> Guardar estado</button>
+            </form>
+
+            <div className="admin-user-flat-section admin-user-account-data">
+              <div className="admin-user-section-title"><div><span>Cuenta</span><h3>Información general</h3></div></div>
+              <dl><div><dt>Registro</dt><dd>{shortDate(u.created_at)}</dd></div><div><dt>Plan activo</dt><dd>{levelText}</dd></div><div><dt>Compra del plan</dt><dd>{shortDate(u.plan_purchased_at)}</dd></div><div><dt>Último acceso</dt><dd>{shortDate(u.last_login_at)}</dd></div><div><dt>Código referido</dt><dd>{u.referral_code || "—"}</dd></div></dl>
             </div>
-          </div>
-        </div>
+          </div>}
 
-        <div className="panel-card no-shadow admin-user-profile-card">
-          <div className="section-title"><span>Cuentas de retiro</span><h3>Wallets registradas por el usuario</h3></div>
-          <div className="admin-account-list">
-            {(detail.withdrawalAccounts || []).length === 0 && <span className="muted-text">Sin cuentas registradas.</span>}
-            {(detail.withdrawalAccounts || []).map((acc) => <div key={acc.id}><strong>{acc.label || acc.network}</strong><small>{acc.network} · {shortAddress(acc.withdrawal_address)}</small></div>)}
-          </div>
-        </div>
+          {section === "wallets" && <div className="admin-user-editor-grid">
+            <div className="admin-user-flat-section">
+              <div className="admin-user-section-title"><div><span>Wallets de carga</span><h3>Direcciones asignadas</h3></div></div>
+              <div className="admin-wallet-clean-list">{(detail.depositWallets || []).map((wallet) => <div key={wallet.id}><div><strong>{wallet.network}</strong><code>{wallet.address}</code></div><div><button type="button" onClick={() => copyValue(wallet.address)}><FiCopy /> Copiar</button>{scanUrl(wallet.network, wallet.address) && <a href={scanUrl(wallet.network, wallet.address)} target="_blank" rel="noreferrer"><FiExternalLink /> Scan</a>}</div></div>)}{!(detail.depositWallets || []).length && <div className="admin-user-empty-state">Sin wallets de carga asignadas.</div>}</div>
+            </div>
 
-        <div className="panel-card no-shadow admin-withdraw-validation-card">
-          <div className="section-title"><span>Validación admin</span><h3>Habilitar retiros</h3></div>
-          <p className="muted-text">Activa esta opción cuando el usuario haya sido verificado por el canal correspondiente.</p>
-          {validationMessage && <div className="alert success">{validationMessage}</div>}
-          <div className="admin-validation-row">
-            <label className="check-line"><input type="checkbox" checked={validationForm.withdrawEnabled} onChange={(e)=>setValidationForm((f)=>({...f,withdrawEnabled:e.target.checked}))} /> <span>Usuario habilitado para retirar</span></label>
-            <input value={validationForm.withdrawEnabledNote} onChange={(e)=>setValidationForm((f)=>({...f,withdrawEnabledNote:e.target.value}))} placeholder="Nota interna opcional" />
-            <button className="secondary-btn" type="button" onClick={saveWithdrawValidation}>Guardar validación</button>
-          </div>
-        </div>
+            <form className="admin-user-flat-section" onSubmit={saveWithdrawalAccount}>
+              <div className="admin-user-section-title"><div><span>Cuenta de retiro</span><h3>{accountForm.id ? "Editar wallet" : "Añadir wallet"}</h3></div>{accountForm.id && <button type="button" className="admin-user-text-action" onClick={() => setAccountForm({ id: null, network: "BEP20-USDT", label: "", withdrawalAddress: "", isDefault: false })}>Cancelar edición</button>}</div>
+              <div className="admin-user-form-grid"><label><span>Red</span><select value={accountForm.network} onChange={(e) => setAccountForm((f) => ({ ...f, network: e.target.value }))}><option value="BEP20-USDT">BEP20-USDT</option><option value="POLYGON-USDT">POLYGON-USDT</option></select></label><label><span>Etiqueta</span><input value={accountForm.label} onChange={(e) => setAccountForm((f) => ({ ...f, label: e.target.value }))} placeholder="Cuenta principal" /></label><label className="wide"><span>Dirección</span><input value={accountForm.withdrawalAddress} onChange={(e) => setAccountForm((f) => ({ ...f, withdrawalAddress: e.target.value.trim() }))} placeholder="0x..." required /></label></div>
+              <label className="admin-user-switch-row compact"><input type="checkbox" checked={accountForm.isDefault} onChange={(e) => setAccountForm((f) => ({ ...f, isDefault: e.target.checked }))} /><span><strong>Cuenta predeterminada</strong></span></label>
+              <button className="admin-user-primary-action" type="submit" disabled={busy}><FiPlus /> {accountForm.id ? "Actualizar cuenta" : "Añadir cuenta"}</button>
+            </form>
 
-        <div className="panel-card no-shadow admin-balance-adjust-card">
-          <div className="section-title"><span>Control manual</span><h3>Ajustar saldo del usuario</h3></div>
-          <p className="muted-text">Permite añadir o descontar saldo de recarga y saldo retirable. Cada ajuste queda registrado en el historial del usuario y en eventos de seguridad.</p>
-          {adjustMessage && <div className="alert success">{adjustMessage}</div>}
-          {adjustError && <div className="alert error">{adjustError}</div>}
-          <form className="admin-balance-form" onSubmit={submitBalanceAdjustment}>
-            <label><span>Saldo</span><select value={adjustForm.balanceType} onChange={(e) => setAdjustForm((f) => ({ ...f, balanceType: e.target.value }))}><option value="recharge">Saldo de recarga</option><option value="withdrawable">Saldo retirable</option></select></label>
-            <label><span>Operación</span><select value={adjustForm.direction} onChange={(e) => setAdjustForm((f) => ({ ...f, direction: e.target.value }))}><option value="credit">Añadir</option><option value="debit">Descontar</option></select></label>
-            <label><span>Monto USDT</span><input type="number" min="0.000001" step="0.000001" value={adjustForm.amountUsdt} onChange={(e) => setAdjustForm((f) => ({ ...f, amountUsdt: e.target.value }))} placeholder="0.00" required /></label>
-            <label className="admin-balance-reason"><span>Motivo interno</span><input value={adjustForm.reason} onChange={(e) => setAdjustForm((f) => ({ ...f, reason: e.target.value }))} placeholder="Ej: bonificación manual, corrección, promoción..." /></label>
-            <button className="primary-btn" type="submit" disabled={adjusting}>{adjusting ? "Procesando..." : "Guardar ajuste"}</button>
-          </form>
-        </div>
+            <div className="admin-user-flat-section wide-section">
+              <div className="admin-user-section-title"><div><span>Cuentas registradas</span><h3>Wallets de retiro</h3></div><small>{compact(detail.withdrawalAccounts?.length)} cuentas</small></div>
+              <div className="admin-withdraw-account-clean-list">{(detail.withdrawalAccounts || []).map((account) => <div key={account.id}><div><strong>{account.label || account.network}</strong><span>{account.network}{account.is_default ? " · Predeterminada" : ""}</span><code>{account.withdrawal_address}</code></div><div><button type="button" onClick={() => editWithdrawalAccount(account)}><FiEdit3 /> Editar</button><button type="button" className="danger" onClick={() => deleteWithdrawalAccount(account)}><FiTrash2 /> Borrar</button></div></div>)}{!(detail.withdrawalAccounts || []).length && <div className="admin-user-empty-state">El usuario todavía no tiene cuentas de retiro.</div>}</div>
+            </div>
+          </div>}
 
-        <div className="panel-card no-shadow admin-roulette-adjust-card">
-          <div className="section-title"><span>Ruleta</span><h3>Asignar puntos de giro</h3></div>
-          <p className="muted-text">Permite añadir, descontar o fijar giros disponibles para este usuario.</p>
-          {rouletteMessage && <div className="alert success">{rouletteMessage}</div>}
-          {rouletteError && <div className="alert error">{rouletteError}</div>}
-          <form className="admin-balance-form" onSubmit={submitRoulettePoints}>
-            <label><span>Operación</span><select value={rouletteForm.operation} onChange={(e)=>setRouletteForm((f)=>({...f,operation:e.target.value}))}><option value="add">Añadir</option><option value="subtract">Descontar</option><option value="set">Fijar total</option></select></label>
-            <label><span>Puntos</span><input type="number" min="0" step="1" value={rouletteForm.points} onChange={(e)=>setRouletteForm((f)=>({...f,points:e.target.value}))} placeholder="0" required /></label>
-            <label className="admin-balance-reason"><span>Motivo interno</span><input value={rouletteForm.reason} onChange={(e)=>setRouletteForm((f)=>({...f,reason:e.target.value}))} placeholder="Ej: bono, evento, soporte..." /></label>
-            <button className="primary-btn" type="submit">Guardar puntos</button>
-          </form>
-        </div>
+          {section === "adjustments" && <div className="admin-user-adjustment-grid">
+            <form className="admin-user-flat-section" onSubmit={submitBalance}><div className="admin-user-section-title"><div><span>Saldos</span><h3>Aumentar o disminuir</h3></div></div><div className="admin-user-form-grid"><label><span>Saldo</span><select value={balanceForm.balanceType} onChange={(e) => setBalanceForm((f) => ({ ...f, balanceType: e.target.value }))}><option value="withdrawable">Saldo retirable</option><option value="recharge">Saldo garantía</option></select></label><label><span>Operación</span><select value={balanceForm.direction} onChange={(e) => setBalanceForm((f) => ({ ...f, direction: e.target.value }))}><option value="credit">Aumentar</option><option value="debit">Disminuir</option></select></label><label><span>Monto USDT</span><input type="number" min="0.000001" step="0.000001" value={balanceForm.amountUsdt} onChange={(e) => setBalanceForm((f) => ({ ...f, amountUsdt: e.target.value }))} required /></label><label className="wide"><span>Motivo</span><input value={balanceForm.reason} onChange={(e) => setBalanceForm((f) => ({ ...f, reason: e.target.value }))} placeholder="Motivo del ajuste" /></label></div><button className="admin-user-primary-action" type="submit" disabled={busy}><FiSave /> Aplicar saldo</button></form>
+            <form className="admin-user-flat-section" onSubmit={submitRoulette}><div className="admin-user-section-title"><div><span>Ruleta</span><h3>Ajustar giros</h3></div></div><div className="admin-user-form-grid"><label><span>Operación</span><select value={rouletteForm.operation} onChange={(e) => setRouletteForm((f) => ({ ...f, operation: e.target.value }))}><option value="add">Aumentar</option><option value="subtract">Disminuir</option><option value="set">Fijar total</option></select></label><label><span>Cantidad</span><input type="number" min="0" step="1" value={rouletteForm.points} onChange={(e) => setRouletteForm((f) => ({ ...f, points: e.target.value }))} required /></label><label className="wide"><span>Motivo</span><input value={rouletteForm.reason} onChange={(e) => setRouletteForm((f) => ({ ...f, reason: e.target.value }))} placeholder="Bono, corrección, evento..." /></label></div><button className="admin-user-primary-action" type="submit" disabled={busy}><FiSave /> Aplicar giros</button></form>
+            <form className="admin-user-flat-section" onSubmit={submitCredit}><div className="admin-user-section-title"><div><span>Crédito</span><h3>Ajustar puntos</h3></div></div><div className="admin-user-form-grid"><label><span>Operación</span><select value={creditForm.operation} onChange={(e) => setCreditForm((f) => ({ ...f, operation: e.target.value }))}><option value="add">Aumentar</option><option value="subtract">Disminuir</option><option value="set">Fijar total</option></select></label><label><span>Cantidad</span><input type="number" min="0" step="1" value={creditForm.points} onChange={(e) => setCreditForm((f) => ({ ...f, points: e.target.value }))} required /></label><label className="wide"><span>Motivo</span><input value={creditForm.reason} onChange={(e) => setCreditForm((f) => ({ ...f, reason: e.target.value }))} placeholder="Motivo obligatorio" required /></label></div><button className="admin-user-primary-action" type="submit" disabled={busy}><FiSave /> Aplicar puntos</button></form>
+          </div>}
 
-        <div className="two-columns admin-two">
-          <div className="panel-card no-shadow"><div className="section-title"><span>Últimas tareas</span><h3>Actividad IA</h3></div><PaginatedAdminTable rows={detail.tasks || []} pageSize={8} columns={[{ key: "title", label: "Tarea" }, { key: "selected_option", label: "Marcó" }, { key: "is_correct", label: "Resultado", render: (r) => r.is_correct ? <StatusBadge tone="success">Correcta</StatusBadge> : <StatusBadge tone="warning">Incorrecta</StatusBadge> }, { key: "reward_usdt", label: "Recompensa", render: (r) => money(r.reward_usdt) }]} /></div>
-          <div className="panel-card no-shadow"><div className="section-title"><span>Historial</span><h3>Últimos movimientos</h3></div><PaginatedAdminTable rows={detail.ledger || []} pageSize={8} columns={[{ key: "title", label: "Movimiento" }, { key: "balance_type", label: "Saldo" }, { key: "direction", label: "Tipo", render: (r) => <StatusBadge tone={r.direction === "credit" ? "success" : "warning"}>{r.direction === "credit" ? "Crédito" : "Débito"}</StatusBadge> }, { key: "amount_usdt", label: "Monto", render: (r) => money(r.amount_usdt) }, { key: "created_at", label: "Fecha", render: (r) => shortDate(r.created_at) }]} /></div>
+          {section === "referrals" && <div className="admin-user-flat-section">
+            <div className="admin-user-section-title"><div><span>Equipo directo</span><h3>Invitados del usuario</h3></div><small>{compact(detail.referrals?.length)} encontrados</small></div>
+            <div className="admin-referrals-clean-table"><div className="head"><span>ID</span><span>Correo</span><span>Nivel</span><span>Creación</span><span>Compra de plan</span></div>{(detail.referrals || []).map((r) => <div className="row" key={r.id}><strong>#{r.id}</strong><span>{r.email}</span><span className={`admin-level-pill level-${Number(r.active_level || 0)}`}>{Number(r.active_level || 0) ? `R${r.active_level}` : "Pasantía"}</span><span>{shortDate(r.created_at)}</span><span>{shortDate(r.plan_purchased_at)}</span></div>)}{!(detail.referrals || []).length && <div className="admin-user-empty-state">Este usuario no tiene invitados directos.</div>}</div>
+          </div>}
+
+          {section === "activity" && <div className="admin-user-flat-section">
+            <div className="admin-user-section-title"><div><span>Historial paginado</span><h3>Actividad de la cuenta</h3></div><small>{compact(activity.pagination?.total)} registros</small></div>
+            <div className="admin-activity-tabs"><button type="button" className={activityType === "ledger" ? "active" : ""} onClick={() => setActivityType("ledger")}>Ganancias y saldos</button><button type="button" className={activityType === "tasks" ? "active" : ""} onClick={() => setActivityType("tasks")}>Tareas</button><button type="button" className={activityType === "deposits" ? "active" : ""} onClick={() => setActivityType("deposits")}>Recargas</button><button type="button" className={activityType === "withdrawals" ? "active" : ""} onClick={() => setActivityType("withdrawals")}>Retiros</button></div>
+            {activityLoading ? <div className="admin-user-empty-state"><FiRefreshCw className="is-spinning" /> Cargando historial...</div> : renderActivityRows()}
+            <PaginationControls page={activity.pagination?.page || 1} total={activity.pagination?.total || 0} limit={activity.pagination?.limit || 10} onPageChange={(page) => loadActivity(activityType, page)} loading={activityLoading} />
+          </div>}
+
+          {section === "security" && <div className="admin-user-editor-grid">
+            <div className="admin-user-flat-section">
+              <div className="admin-user-section-title"><div><span>Acceso</span><h3>Contraseña y sesiones</h3></div></div>
+              <form className="admin-password-reset-form" onSubmit={resetPassword}><label><span>Nueva contraseña</span><input type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm((f) => ({ ...f, newPassword: e.target.value }))} placeholder="Mín. 8, mayúscula, minúscula y número" required /></label><label><span>Confirmar contraseña</span><input type="password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm((f) => ({ ...f, confirmPassword: e.target.value }))} required /></label><button type="submit" disabled={busy}><FiKey /> Cambiar contraseña</button></form>
+              <button type="button" className="admin-force-logout-button" onClick={forceLogout} disabled={busy}><FiLogOut /> Cerrar todas sus sesiones</button>
+            </div>
+
+            <div className="admin-user-flat-section">
+              <div className="admin-user-section-title"><div><span>Moderación</span><h3>Estado de seguridad</h3></div></div>
+              <label><span>Motivo de sospecha</span><textarea rows="3" value={securityForm.suspiciousReason} onChange={(e) => setSecurityForm((f) => ({ ...f, suspiciousReason: e.target.value }))} placeholder="Motivo interno" /></label>
+              <button type="button" className={`admin-security-action ${u.is_suspicious ? "neutral" : "warning"}`} onClick={toggleSuspicious} disabled={busy}><FiAlertTriangle /> {u.is_suspicious ? "Quitar estado sospechoso" : "Marcar como sospechoso"}</button>
+              <label><span>Motivo de baneo</span><textarea rows="3" value={securityForm.bannedReason} onChange={(e) => setSecurityForm((f) => ({ ...f, bannedReason: e.target.value }))} placeholder="Motivo del bloqueo" /></label>
+              <button type="button" className={`admin-security-action ${u.is_banned ? "neutral" : "danger"}`} onClick={toggleBan} disabled={busy}><FiShield /> {u.is_banned ? "Desbanear usuario" : "Banear usuario"}</button>
+            </div>
+
+            <div className="admin-user-flat-section wide-section">
+              <div className="admin-user-section-title"><div><span>Direcciones IP</span><h3>Cuentas relacionadas</h3></div><small>{compact(detail.sharedIpUsers?.length)} coincidencias</small></div>
+              <div className="admin-ip-summary"><div><span>IP de registro</span><code>{u.register_ip || "No registrada"}</code></div><div><span>Última IP</span><code>{u.last_login_ip || "No registrada"}</code></div></div>
+              <div className="admin-shared-ip-list">{(detail.sharedIpUsers || []).map((r) => <div key={r.id}><strong>#{r.id}</strong><span>{r.email}</span><span className={`admin-level-pill level-${Number(r.active_level || 0)}`}>{Number(r.active_level || 0) ? `R${r.active_level}` : "Pasantía"}</span><code>{r.matching_ip || "—"}</code></div>)}{!(detail.sharedIpUsers || []).length && <div className="admin-user-empty-state">No se detectaron otras cuentas con las mismas IP.</div>}</div>
+            </div>
+          </div>}
         </div>
-        <div className="panel-card no-shadow"><div className="section-title"><span>Referidos</span><h3>Directos recientes</h3></div><PaginatedAdminTable rows={detail.referrals || []} pageSize={8} columns={[{ key: "email", label: "Usuario" }, { key: "created_at", label: "Registro", render: (r) => shortDate(r.created_at) }, { key: "state", label: "Estado", render: (r) => r.is_banned ? <StatusBadge tone="danger">Baneado</StatusBadge> : r.is_suspicious ? <StatusBadge tone="warning">Sospechoso</StatusBadge> : <StatusBadge tone="success">Normal</StatusBadge> }]} /></div>
-      </div>
+      </section>
     </div>
   );
 }
+
 
 function TasksAdminPanel() {
   const [rows, setRows] = useState([]);
