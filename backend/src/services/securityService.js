@@ -28,7 +28,8 @@ async function ensureSecuritySchema(clientOrPool = pool) {
     ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS banned_reason TEXT,
     ADD COLUMN IF NOT EXISTS banned_at TIMESTAMP WITHOUT TIME ZONE,
-    ADD COLUMN IF NOT EXISTS banned_by INTEGER
+    ADD COLUMN IF NOT EXISTS banned_by INTEGER,
+    ADD COLUMN IF NOT EXISTS auth_version INTEGER NOT NULL DEFAULT 0
   `);
 
   await clientOrPool.query(`

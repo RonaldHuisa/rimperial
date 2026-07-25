@@ -7,6 +7,12 @@ const {
   getAdminUserDetail,
   updateAdminUser,
   adjustAdminUserBalance,
+  updateAdminUserProfile,
+  saveAdminWithdrawalAccount,
+  deleteAdminWithdrawalAccount,
+  resetAdminUserPassword,
+  forceLogoutAdminUser,
+  getAdminUserActivity,
   listAdminTasks,
   createAdminTask,
   updateAdminTask,
@@ -39,6 +45,13 @@ router.get("/overview", getAdminOverview);
 router.get("/users", listAdminUsers);
 router.get("/users/:userId", getAdminUserDetail);
 router.patch("/users/:userId", updateAdminUser);
+router.patch("/users/:userId/profile", updateAdminUserProfile);
+router.get("/users/:userId/activity", getAdminUserActivity);
+router.post("/users/:userId/withdrawal-accounts", saveAdminWithdrawalAccount);
+router.patch("/users/:userId/withdrawal-accounts/:accountId", saveAdminWithdrawalAccount);
+router.delete("/users/:userId/withdrawal-accounts/:accountId", deleteAdminWithdrawalAccount);
+router.post("/users/:userId/reset-password", resetAdminUserPassword);
+router.post("/users/:userId/force-logout", forceLogoutAdminUser);
 router.post("/users/:userId/balance", adjustAdminUserBalance);
 router.post("/users/:userId/roulette-points", adjustAdminUserRoulettePoints);
 router.get("/credit-points/users", listAdminCreditPointUsers);

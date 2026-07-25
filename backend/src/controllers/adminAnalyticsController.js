@@ -1,8 +1,10 @@
 const pool = require("../config/db");
+const bcrypt = require("bcryptjs");
 const { ensureRouletteSchema, normalizePrize, normalizeSpin } = require("../services/rouletteService");
 const { seedRoyalVipPackages } = require("../services/royalAiTaskService");
 const { ensureCreditPointsSchema, adjustCreditPoints, awardCreditPointMilestone, awardValidatedReferralCreditPoint } = require("../services/creditPointsService");
 const { ensureRedeemCodeLimitSchema, getRedeemDailyLimitConfig, updateRedeemDailyLimitConfig } = require("../services/redeemCodeLimitService");
+const { normalizePhone, normalizeCountryCode, validateWithdrawalAccountPayload } = require("../services/profileService");
 
 function money(value) {
   const n = Number(value || 0);
@@ -321,7 +323,7 @@ async function getAdminOverview(req, res) {
 
 async function listAdminUsers(req, res) {
   try {
-    const limit = getLimit(req.query.limit, 25, 100);
+    const limit = getLimit(req.query.limit, 20, 100);
     const page = Math.max(1, Number(req.query.page || 1));
     const offset = getOffset(page, limit);
     const search = String(req.query.search || "").trim();
@@ -332,8 +334,7 @@ async function listAdminUsers(req, res) {
     const where = [];
     const params = [];
     if (search) {
-      const loweredSearch = search.toLowerCase();
-      params.push(`%${loweredSearch}%`);
+      params.push(`%${search.toLowerCase()}%`);
       const likeParam = `$${params.length}`;
       params.push(search);
       const exactParam = `$${params.length}`;
@@ -354,50 +355,35 @@ async function listAdminUsers(req, res) {
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
     const dataParams = [...params, limit, offset];
-    const countParams = [...params];
-
     const baseSql = `
       FROM users u
       LEFT JOIN LATERAL (
-        SELECT MAX(level)::int AS active_level
-        FROM vip_purchases
-        WHERE user_id = u.id AND status='active' AND expires_at > NOW()
+        SELECT vp.level::int AS active_level, vp.purchased_at AS active_plan_purchased_at
+        FROM vip_purchases vp
+        WHERE vp.user_id = u.id AND vp.status='active' AND vp.expires_at > NOW()
+        ORDER BY vp.level DESC, vp.purchased_at DESC
+        LIMIT 1
       ) active_vip ON true
       LEFT JOIN LATERAL (
-        SELECT COUNT(*)::int AS responses,
-               COALESCE(SUM(CASE WHEN is_correct THEN 1 ELSE 0 END),0)::int AS correct,
-               COALESCE(SUM(reward_usdt),0) AS rewards
-        FROM ai_task_responses
-        WHERE user_id = u.id
-          AND completed_at >= date_trunc('week', NOW())
-          AND completed_at < date_trunc('week', NOW()) + INTERVAL '7 days'
-      ) task_week ON true
-      LEFT JOIN LATERAL (
         SELECT COUNT(*)::int AS direct_count
-        FROM users u2
-        WHERE u2.referred_by_id = u.id
+        FROM users invited
+        WHERE invited.referred_by_id = u.id
       ) refs ON true
       ${whereSql}
     `;
 
     const [countResult, usersResult] = await Promise.all([
-      pool.query(`SELECT COUNT(*)::int AS total ${baseSql}`, countParams),
+      pool.query(`SELECT COUNT(*)::int AS total ${baseSql}`, params),
       pool.query(
-        `
-        SELECT
-          u.id,u.email,u.referral_code,u.referred_by_id,u.created_at,u.balance_usdt,u.recharge_balance_usdt,
-          u.withdrawable_usdt,u.earnings_balance_usdt,u.is_admin,u.is_banned,u.banned_reason,
-          u.is_suspicious,u.suspicious_reason,u.register_ip,u.last_login_ip,u.last_login_at,
-          u.full_name,u.phone_country_code,u.phone_number,COALESCE(u.credit_points,50) AS credit_points,COALESCE(u.roulette_points,0) AS roulette_points,COALESCE(u.withdraw_enabled,false) AS withdraw_enabled,
+        `SELECT
+          u.id,u.email,u.created_at,u.withdrawable_usdt,u.is_admin,u.is_banned,u.is_suspicious,
+          u.withdraw_enabled,u.full_name,u.register_ip,u.last_login_ip,
           COALESCE(active_vip.active_level,0) AS active_level,
-          COALESCE(task_week.responses,0) AS week_responses,
-          COALESCE(task_week.correct,0) AS week_correct,
-          COALESCE(task_week.rewards,0) AS week_rewards,
+          active_vip.active_plan_purchased_at,
           COALESCE(refs.direct_count,0) AS direct_count
         ${baseSql}
-        ORDER BY u.created_at DESC
-        LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}
-        `,
+        ORDER BY u.created_at DESC, u.id DESC
+        LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`,
         dataParams
       ),
     ]);
@@ -405,12 +391,7 @@ async function listAdminUsers(req, res) {
     return res.json({
       users: usersResult.rows.map((row) => ({
         ...row,
-        balance_usdt: money(row.balance_usdt),
-        recharge_balance_usdt: money(row.recharge_balance_usdt),
         withdrawable_usdt: money(row.withdrawable_usdt),
-        earnings_balance_usdt: money(row.earnings_balance_usdt),
-        week_rewards: money(row.week_rewards),
-        week_accuracy: intValue(row.week_responses) ? Number(((intValue(row.week_correct) / intValue(row.week_responses)) * 100).toFixed(2)) : 0,
       })),
       pagination: { page, limit, total: intValue(countResult.rows[0]?.total) },
     });
@@ -424,46 +405,156 @@ async function getAdminUserDetail(req, res) {
   const userId = Number(req.params.userId);
   if (!userId) return res.status(400).json({ message: "Usuario inválido." });
   try {
-    const [user, deposits, withdrawals, tasks, ledger, referrals, withdrawalAccounts, depositWallets] = await Promise.all([
-      pool.query(`SELECT id,email,referral_code,referred_by_id,created_at,balance_usdt,recharge_balance_usdt,withdrawable_usdt,earnings_balance_usdt,is_admin,is_banned,banned_reason,is_suspicious,suspicious_reason,register_ip,last_login_ip,last_login_at,full_name,phone_country_iso,phone_country_name,phone_country_code,phone_number,COALESCE(credit_points,50) AS credit_points,COALESCE(roulette_points,0) AS roulette_points,COALESCE(withdraw_enabled,false) AS withdraw_enabled,withdraw_enabled_at,withdraw_enabled_note FROM users WHERE id=$1`, [userId]),
-      pool.query(`SELECT id,network,amount_usdt,status,sweep_status,tx_hash,created_at FROM deposits WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20`, [userId]),
-      pool.query(`SELECT id,network,amount_requested,amount_to_receive,status,tx_hash,created_at,paid_at FROM withdrawals WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20`, [userId]),
+    const [user, referrals, withdrawalAccounts, depositWallets, sharedIpUsers, activityCounts] = await Promise.all([
       pool.query(`
-        SELECT r.id,r.selected_option,r.correct_option,r.is_correct,r.reward_usdt,r.completed_at,q.title,q.category,q.asset
-        FROM ai_task_responses r JOIN ai_task_questions q ON q.id=r.question_id
-        WHERE r.user_id=$1 ORDER BY r.completed_at DESC LIMIT 30
+        SELECT
+          u.id,u.email,u.referral_code,u.referred_by_id,u.created_at,
+          u.balance_usdt,u.recharge_balance_usdt,u.withdrawable_usdt,u.earnings_balance_usdt,
+          u.is_admin,u.is_banned,u.banned_reason,u.is_suspicious,u.suspicious_reason,
+          u.register_ip,u.last_login_ip,u.last_login_at,u.full_name,u.phone_country_iso,
+          u.phone_country_name,u.phone_country_code,u.phone_number,
+          COALESCE(u.credit_points,50) AS credit_points,
+          COALESCE(u.roulette_points,0) AS roulette_points,
+          COALESCE(u.withdraw_enabled,false) AS withdraw_enabled,
+          u.withdraw_enabled_at,u.withdraw_enabled_note,
+          COALESCE(active_vip.active_level,0) AS active_level,
+          active_vip.plan_purchased_at,
+          active_vip.plan_expires_at
+        FROM users u
+        LEFT JOIN LATERAL (
+          SELECT vp.level::int AS active_level, vp.purchased_at AS plan_purchased_at, vp.expires_at AS plan_expires_at
+          FROM vip_purchases vp
+          WHERE vp.user_id=u.id AND vp.status='active' AND vp.expires_at>NOW()
+          ORDER BY vp.level DESC, vp.purchased_at DESC
+          LIMIT 1
+        ) active_vip ON true
+        WHERE u.id=$1
       `, [userId]),
-      pool.query(`SELECT id,balance_type,direction,type,title,amount_usdt,status,created_at FROM account_ledger WHERE user_id=$1 ORDER BY created_at DESC LIMIT 30`, [userId]),
-      pool.query(`SELECT id,email,created_at,is_banned,is_suspicious FROM users WHERE referred_by_id=$1 ORDER BY created_at DESC LIMIT 30`, [userId]),
+      pool.query(`
+        SELECT
+          invited.id,invited.email,invited.created_at,invited.is_banned,invited.is_suspicious,
+          COALESCE(plan.level,0) AS active_level,
+          plan.purchased_at AS plan_purchased_at
+        FROM users invited
+        LEFT JOIN LATERAL (
+          SELECT vp.level::int AS level, vp.purchased_at
+          FROM vip_purchases vp
+          WHERE vp.user_id=invited.id
+          ORDER BY vp.purchased_at DESC, vp.id DESC
+          LIMIT 1
+        ) plan ON true
+        WHERE invited.referred_by_id=$1
+        ORDER BY invited.created_at DESC, invited.id DESC
+        LIMIT 200
+      `, [userId]),
       pool.query(`SELECT id,network,label,withdrawal_address,is_default,created_at,updated_at FROM user_withdrawal_accounts WHERE user_id=$1 ORDER BY is_default DESC, network ASC`, [userId]),
       pool.query(`
         SELECT id,network,address,public_key,created_at
         FROM wallets
         WHERE user_id=$1
-        ORDER BY
+        ORDER BY CASE WHEN network='BEP20-USDT' THEN 1 WHEN network='POLYGON-USDT' THEN 2 ELSE 9 END, network ASC, id ASC
+      `, [userId]),
+      pool.query(`
+        WITH target AS (
+          SELECT register_ip,last_login_ip FROM users WHERE id=$1
+        )
+        SELECT
+          other.id,other.email,other.created_at,other.register_ip,other.last_login_ip,
+          COALESCE(active_vip.active_level,0) AS active_level,
           CASE
-            WHEN network='BEP20-USDT' THEN 1
-            WHEN network='POLYGON-USDT' THEN 2
-            ELSE 9
-          END,
-          network ASC,
-          id ASC
+            WHEN other.register_ip IS NOT NULL AND other.register_ip = target.register_ip THEN other.register_ip
+            WHEN other.register_ip IS NOT NULL AND other.register_ip = target.last_login_ip THEN other.register_ip
+            WHEN other.last_login_ip IS NOT NULL AND other.last_login_ip = target.register_ip THEN other.last_login_ip
+            WHEN other.last_login_ip IS NOT NULL AND other.last_login_ip = target.last_login_ip THEN other.last_login_ip
+            ELSE NULL
+          END AS matching_ip
+        FROM users other
+        CROSS JOIN target
+        LEFT JOIN LATERAL (
+          SELECT vp.level::int AS active_level
+          FROM vip_purchases vp
+          WHERE vp.user_id=other.id AND vp.status='active' AND vp.expires_at>NOW()
+          ORDER BY vp.level DESC, vp.purchased_at DESC LIMIT 1
+        ) active_vip ON true
+        WHERE other.id<>$1
+          AND (
+            (target.register_ip IS NOT NULL AND (other.register_ip=target.register_ip OR other.last_login_ip=target.register_ip))
+            OR (target.last_login_ip IS NOT NULL AND (other.register_ip=target.last_login_ip OR other.last_login_ip=target.last_login_ip))
+          )
+        ORDER BY other.created_at DESC
+        LIMIT 100
+      `, [userId]),
+      pool.query(`
+        SELECT
+          (SELECT COUNT(*)::int FROM ai_task_responses WHERE user_id=$1) AS tasks,
+          (SELECT COUNT(*)::int FROM deposits WHERE user_id=$1) AS deposits,
+          (SELECT COUNT(*)::int FROM withdrawals WHERE user_id=$1) AS withdrawals,
+          (SELECT COUNT(*)::int FROM account_ledger WHERE user_id=$1) AS ledger
       `, [userId]),
     ]);
     if (!user.rows.length) return res.status(404).json({ message: "Usuario no encontrado." });
+    const row = user.rows[0];
     return res.json({
-      user: user.rows[0],
-      deposits: deposits.rows,
-      withdrawals: withdrawals.rows,
-      tasks: tasks.rows,
-      ledger: ledger.rows,
+      user: {
+        ...row,
+        balance_usdt: money(row.balance_usdt),
+        recharge_balance_usdt: money(row.recharge_balance_usdt),
+        withdrawable_usdt: money(row.withdrawable_usdt),
+        earnings_balance_usdt: money(row.earnings_balance_usdt),
+      },
       referrals: referrals.rows,
       withdrawalAccounts: withdrawalAccounts.rows,
       depositWallets: depositWallets.rows,
+      sharedIpUsers: sharedIpUsers.rows,
+      activityCounts: activityCounts.rows[0] || {},
     });
   } catch (error) {
     console.error("ADMIN USER DETAIL ERROR:", error);
     return res.status(500).json({ message: "Error al cargar detalle de usuario.", detail: error.message });
+  }
+}
+
+async function getAdminUserActivity(req, res) {
+  const userId = Number(req.params.userId);
+  const type = String(req.query.type || "ledger").toLowerCase();
+  const page = Math.max(1, Number(req.query.page || 1));
+  const limit = getLimit(req.query.limit, 10, 50);
+  const offset = getOffset(page, limit);
+  if (!userId) return res.status(400).json({ message: "Usuario inválido." });
+
+  const queries = {
+    tasks: {
+      count: `SELECT COUNT(*)::int AS total FROM ai_task_responses WHERE user_id=$1`,
+      data: `SELECT r.id,q.title,q.category,q.asset,r.selected_option,r.correct_option,r.is_correct,r.reward_usdt,r.completed_at AS created_at FROM ai_task_responses r JOIN ai_task_questions q ON q.id=r.question_id WHERE r.user_id=$1 ORDER BY r.completed_at DESC,r.id DESC LIMIT $2 OFFSET $3`,
+    },
+    deposits: {
+      count: `SELECT COUNT(*)::int AS total FROM deposits WHERE user_id=$1`,
+      data: `SELECT id,network,amount_usdt,status,sweep_status,tx_hash,created_at FROM deposits WHERE user_id=$1 ORDER BY created_at DESC,id DESC LIMIT $2 OFFSET $3`,
+    },
+    withdrawals: {
+      count: `SELECT COUNT(*)::int AS total FROM withdrawals WHERE user_id=$1`,
+      data: `SELECT id,network,amount_requested,amount_to_receive,status,tx_hash,created_at,paid_at FROM withdrawals WHERE user_id=$1 ORDER BY created_at DESC,id DESC LIMIT $2 OFFSET $3`,
+    },
+    ledger: {
+      count: `SELECT COUNT(*)::int AS total FROM account_ledger WHERE user_id=$1`,
+      data: `SELECT id,balance_type,direction,type,title,amount_usdt,description,status,created_at FROM account_ledger WHERE user_id=$1 ORDER BY created_at DESC,id DESC LIMIT $2 OFFSET $3`,
+    },
+  };
+  const selected = queries[type];
+  if (!selected) return res.status(400).json({ message: "Tipo de actividad inválido." });
+  try {
+    const [countResult, rowsResult] = await Promise.all([
+      pool.query(selected.count, [userId]),
+      pool.query(selected.data, [userId, limit, offset]),
+    ]);
+    return res.json({
+      type,
+      rows: rowsResult.rows,
+      pagination: { page, limit, total: intValue(countResult.rows[0]?.total) },
+    });
+  } catch (error) {
+    console.error("ADMIN USER ACTIVITY ERROR:", error);
+    return res.status(500).json({ message: "Error al cargar actividad del usuario.", detail: error.message });
   }
 }
 
@@ -477,7 +568,6 @@ async function updateAdminUser(req, res) {
   try {
     await ensureCreditPointsSchema(client);
     await client.query("BEGIN");
-
     const currentResult = await client.query(
       `SELECT id,email,COALESCE(withdraw_enabled,false) AS withdraw_enabled,referred_by_id FROM users WHERE id=$1 FOR UPDATE`,
       [userId]
@@ -489,45 +579,28 @@ async function updateAdminUser(req, res) {
     const currentUser = currentResult.rows[0];
     const wasWithdrawEnabled = Boolean(currentUser.withdraw_enabled);
 
-    const result = await client.query(
-      `
-      UPDATE users
-      SET
+    const result = await client.query(`
+      UPDATE users SET
         is_suspicious = COALESCE($1, is_suspicious),
-        suspicious_reason = CASE WHEN $1 IS NULL THEN suspicious_reason WHEN $1 = true THEN NULLIF($2,'') ELSE NULL END,
-        suspicious_at = CASE WHEN $1 = true THEN NOW() WHEN $1 = false THEN NULL ELSE suspicious_at END,
+        suspicious_reason = CASE WHEN $1 IS NULL THEN suspicious_reason WHEN $1=true THEN NULLIF($2,'') ELSE NULL END,
+        suspicious_at = CASE WHEN $1=true THEN NOW() WHEN $1=false THEN NULL ELSE suspicious_at END,
         is_banned = COALESCE($3, is_banned),
-        banned_reason = CASE WHEN $3 IS NULL THEN banned_reason WHEN $3 = true THEN NULLIF($4,'') ELSE NULL END,
-        banned_at = CASE WHEN $3 = true THEN NOW() WHEN $3 = false THEN NULL ELSE banned_at END,
-        banned_by = CASE WHEN $3 = true THEN $6 WHEN $3 = false THEN NULL ELSE banned_by END,
+        banned_reason = CASE WHEN $3 IS NULL THEN banned_reason WHEN $3=true THEN NULLIF($4,'') ELSE NULL END,
+        banned_at = CASE WHEN $3=true THEN NOW() WHEN $3=false THEN NULL ELSE banned_at END,
+        banned_by = CASE WHEN $3=true THEN $6 WHEN $3=false THEN NULL ELSE banned_by END,
         is_admin = COALESCE($5, is_admin),
         withdraw_enabled = COALESCE($8, withdraw_enabled),
-        withdraw_enabled_at = CASE WHEN $8 = true THEN NOW() WHEN $8 = false THEN NULL ELSE withdraw_enabled_at END,
-        withdraw_enabled_by = CASE WHEN $8 = true THEN $6 WHEN $8 = false THEN NULL ELSE withdraw_enabled_by END,
+        withdraw_enabled_at = CASE WHEN $8=true THEN NOW() WHEN $8=false THEN NULL ELSE withdraw_enabled_at END,
+        withdraw_enabled_by = CASE WHEN $8=true THEN $6 WHEN $8=false THEN NULL ELSE withdraw_enabled_by END,
         withdraw_enabled_note = CASE WHEN $8 IS NULL THEN withdraw_enabled_note ELSE NULLIF($9,'') END
       WHERE id=$7
       RETURNING id,email,is_admin,is_banned,banned_reason,is_suspicious,suspicious_reason,withdraw_enabled,withdraw_enabled_at,withdraw_enabled_note,COALESCE(credit_points,50) AS credit_points
-      `,
-      [isSuspicious, suspiciousReason || null, isBanned, bannedReason || null, isAdmin, adminId, userId, withdrawEnabled, withdrawEnabledNote || null]
-    );
+    `, [isSuspicious, suspiciousReason || null, isBanned, bannedReason || null, isAdmin, adminId, userId, withdrawEnabled, withdrawEnabledNote || null]);
 
     if (withdrawEnabled === true) {
-      await awardCreditPointMilestone(
-        client,
-        userId,
-        90,
-        "withdraw_enabled",
-        "Admin habilitó retiros del usuario.",
-        { adminId, note: withdrawEnabledNote || "" },
-        adminId
-      );
-
+      await awardCreditPointMilestone(client, userId, 90, "withdraw_enabled", "Admin habilitó retiros del usuario.", { adminId, note: withdrawEnabledNote || "" }, adminId);
       if (!wasWithdrawEnabled && currentUser.referred_by_id) {
-        await awardValidatedReferralCreditPoint(client, {
-          sponsorId: currentUser.referred_by_id,
-          invitedUserId: userId,
-          adminId,
-        });
+        await awardValidatedReferralCreditPoint(client, { sponsorId: currentUser.referred_by_id, invitedUserId: userId, adminId });
       }
     }
 
@@ -535,7 +608,6 @@ async function updateAdminUser(req, res) {
       `INSERT INTO user_security_events(user_id,event_type,reason,created_by,metadata) VALUES ($1,'ADMIN_USER_UPDATE',$2,$3,$4::jsonb)`,
       [userId, "Actualización realizada desde panel admin.", adminId, JSON.stringify({ isSuspicious, isBanned, isAdmin, withdrawEnabled })]
     ).catch(() => {});
-
     await client.query("COMMIT");
     return res.json({ message: "Usuario actualizado.", user: result.rows[0] });
   } catch (error) {
@@ -547,131 +619,172 @@ async function updateAdminUser(req, res) {
   }
 }
 
+async function updateAdminUserProfile(req, res) {
+  const userId = Number(req.params.userId);
+  const adminId = req.user.userId;
+  const fullName = String(req.body?.fullName || "").trim().slice(0, 160);
+  const phoneCountryIso = String(req.body?.phoneCountryIso || "").trim().toUpperCase().slice(0, 8);
+  const phoneCountryName = String(req.body?.phoneCountryName || "").trim().slice(0, 80);
+  const phoneCountryCode = normalizeCountryCode(req.body?.phoneCountryCode);
+  const phoneNumber = normalizePhone(req.body?.phoneNumber);
+  if (!userId) return res.status(400).json({ message: "Usuario inválido." });
+  if (fullName && fullName.length < 3) return res.status(400).json({ message: "El nombre debe tener al menos 3 caracteres." });
+  if ((phoneCountryCode || phoneNumber) && (!phoneCountryCode || phoneNumber.length < 6)) {
+    return res.status(400).json({ message: "Ingresa un celular válido o deja ambos campos vacíos." });
+  }
+  try {
+    const result = await pool.query(`
+      UPDATE users SET full_name=NULLIF($1,''),phone_country_iso=NULLIF($2,''),phone_country_name=NULLIF($3,''),phone_country_code=NULLIF($4,''),phone_number=NULLIF($5,'')
+      WHERE id=$6
+      RETURNING id,email,full_name,phone_country_iso,phone_country_name,phone_country_code,phone_number
+    `, [fullName, phoneCountryIso, phoneCountryName, phoneCountryCode, phoneNumber, userId]);
+    if (!result.rows.length) return res.status(404).json({ message: "Usuario no encontrado." });
+    await pool.query(`INSERT INTO user_security_events(user_id,event_type,reason,created_by,metadata) VALUES ($1,'ADMIN_PROFILE_UPDATE','Datos personales editados por administrador.',$2,$3::jsonb)`, [userId, adminId, JSON.stringify({ fullName, phoneCountryIso, phoneCountryCode })]).catch(() => {});
+    return res.json({ message: "Datos personales actualizados.", user: result.rows[0] });
+  } catch (error) {
+    console.error("ADMIN PROFILE UPDATE ERROR:", error);
+    return res.status(500).json({ message: "Error al actualizar datos personales.", detail: error.message });
+  }
+}
+
+async function saveAdminWithdrawalAccount(req, res) {
+  const userId = Number(req.params.userId);
+  const accountId = Number(req.params.accountId || 0);
+  const validation = validateWithdrawalAccountPayload(req.body || {});
+  if (!userId) return res.status(400).json({ message: "Usuario inválido." });
+  if (!validation.ok) return res.status(400).json({ message: validation.message });
+  const { network, withdrawalAddress, label, isDefault } = validation.account;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    if (isDefault) await client.query(`UPDATE user_withdrawal_accounts SET is_default=false WHERE user_id=$1`, [userId]);
+    let result;
+    if (accountId) {
+      result = await client.query(`
+        UPDATE user_withdrawal_accounts SET network=$1,label=$2,withdrawal_address=$3,is_default=$4,updated_at=NOW()
+        WHERE id=$5 AND user_id=$6
+        RETURNING id,network,label,withdrawal_address,is_default,created_at,updated_at
+      `, [network, label, withdrawalAddress, isDefault, accountId, userId]);
+    } else {
+      const count = await client.query(`SELECT COUNT(*)::int AS total FROM user_withdrawal_accounts WHERE user_id=$1`, [userId]);
+      const shouldDefault = isDefault || Number(count.rows[0]?.total || 0) === 0;
+      result = await client.query(`
+        INSERT INTO user_withdrawal_accounts(user_id,network,label,withdrawal_address,is_default,updated_at)
+        VALUES($1,$2,$3,$4,$5,NOW())
+        ON CONFLICT(user_id,network) DO UPDATE SET label=EXCLUDED.label,withdrawal_address=EXCLUDED.withdrawal_address,is_default=EXCLUDED.is_default,updated_at=NOW()
+        RETURNING id,network,label,withdrawal_address,is_default,created_at,updated_at
+      `, [userId, network, label, withdrawalAddress, shouldDefault]);
+    }
+    if (!result.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Cuenta de retiro no encontrada." });
+    }
+    await client.query("COMMIT");
+    return res.json({ message: accountId ? "Cuenta de retiro actualizada." : "Cuenta de retiro guardada.", account: result.rows[0] });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    if (error.code === "23505") return res.status(409).json({ message: "Ya existe una cuenta para esa red." });
+    console.error("ADMIN WITHDRAW ACCOUNT SAVE ERROR:", error);
+    return res.status(500).json({ message: "Error al guardar cuenta de retiro.", detail: error.message });
+  } finally { client.release(); }
+}
+
+async function deleteAdminWithdrawalAccount(req, res) {
+  const userId = Number(req.params.userId);
+  const accountId = Number(req.params.accountId);
+  if (!userId || !accountId) return res.status(400).json({ message: "Cuenta inválida." });
+  try {
+    const result = await pool.query(`DELETE FROM user_withdrawal_accounts WHERE id=$1 AND user_id=$2 RETURNING id`, [accountId, userId]);
+    if (!result.rows.length) return res.status(404).json({ message: "Cuenta de retiro no encontrada." });
+    return res.json({ message: "Cuenta de retiro eliminada." });
+  } catch (error) {
+    console.error("ADMIN WITHDRAW ACCOUNT DELETE ERROR:", error);
+    return res.status(500).json({ message: "Error al eliminar cuenta de retiro.", detail: error.message });
+  }
+}
+
+async function resetAdminUserPassword(req, res) {
+  const userId = Number(req.params.userId);
+  const adminId = req.user.userId;
+  const newPassword = String(req.body?.newPassword || "");
+  const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  if (!userId) return res.status(400).json({ message: "Usuario inválido." });
+  if (!strong.test(newPassword)) return res.status(400).json({ message: "La contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula y número." });
+  try {
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const result = await pool.query(`UPDATE users SET password_hash=$1,security_password_hash=$1,auth_version=COALESCE(auth_version,0)+1 WHERE id=$2 RETURNING id,email,auth_version`, [passwordHash, userId]);
+    if (!result.rows.length) return res.status(404).json({ message: "Usuario no encontrado." });
+    await pool.query(`INSERT INTO user_security_events(user_id,event_type,reason,created_by) VALUES($1,'ADMIN_PASSWORD_RESET','Contraseña cambiada por administrador.',$2)`, [userId, adminId]).catch(() => {});
+    return res.json({ message: "Contraseña actualizada y sesiones cerradas." });
+  } catch (error) {
+    console.error("ADMIN PASSWORD RESET ERROR:", error);
+    return res.status(500).json({ message: "Error al cambiar contraseña.", detail: error.message });
+  }
+}
+
+async function forceLogoutAdminUser(req, res) {
+  const userId = Number(req.params.userId);
+  const adminId = req.user.userId;
+  if (!userId) return res.status(400).json({ message: "Usuario inválido." });
+  try {
+    const result = await pool.query(`UPDATE users SET auth_version=COALESCE(auth_version,0)+1 WHERE id=$1 RETURNING id,email,auth_version`, [userId]);
+    if (!result.rows.length) return res.status(404).json({ message: "Usuario no encontrado." });
+    await pool.query(`INSERT INTO user_security_events(user_id,event_type,reason,created_by) VALUES($1,'ADMIN_FORCE_LOGOUT','Sesiones cerradas por administrador.',$2)`, [userId, adminId]).catch(() => {});
+    return res.json({ message: "Sesiones del usuario cerradas." });
+  } catch (error) {
+    console.error("ADMIN FORCE LOGOUT ERROR:", error);
+    return res.status(500).json({ message: "Error al cerrar sesiones.", detail: error.message });
+  }
+}
+
 async function adjustAdminUserBalance(req, res) {
   const userId = Number(req.params.userId);
   const adminId = req.user.userId;
   const { balanceType, direction, amountUsdt, reason } = req.body || {};
 
   if (!userId) return res.status(400).json({ message: "Usuario inválido." });
-  if (!['recharge', 'withdrawable'].includes(balanceType)) {
-    return res.status(400).json({ message: "Selecciona un saldo válido: recarga o retirable." });
-  }
-  if (!['credit', 'debit'].includes(direction)) {
-    return res.status(400).json({ message: "Selecciona una operación válida: sumar o descontar." });
-  }
-
+  if (!["recharge", "withdrawable"].includes(balanceType)) return res.status(400).json({ message: "Selecciona saldo de garantía o retirable." });
+  if (!["credit", "debit"].includes(direction)) return res.status(400).json({ message: "Selecciona sumar o descontar." });
   const amount = Number(amountUsdt);
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return res.status(400).json({ message: "Ingresa un monto mayor a 0." });
-  }
-  if (amount > 1000000) {
-    return res.status(400).json({ message: "Monto demasiado alto para un ajuste manual." });
-  }
+  if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ message: "Ingresa un monto mayor a 0." });
+  if (amount > 1000000) return res.status(400).json({ message: "Monto demasiado alto." });
 
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
-    const userResult = await client.query(
-      `SELECT id,email,balance_usdt,recharge_balance_usdt,withdrawable_usdt,earnings_balance_usdt FROM users WHERE id=$1 FOR UPDATE`,
-      [userId]
-    );
-    if (!userResult.rows.length) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ message: "Usuario no encontrado." });
-    }
+    await client.query("BEGIN");
+    const userResult = await client.query(`SELECT id,email,balance_usdt,recharge_balance_usdt,withdrawable_usdt,earnings_balance_usdt FROM users WHERE id=$1 FOR UPDATE`, [userId]);
+    if (!userResult.rows.length) { await client.query("ROLLBACK"); return res.status(404).json({ message: "Usuario no encontrado." }); }
     const user = userResult.rows[0];
-
     const currentRecharge = Number(user.recharge_balance_usdt || 0);
     const currentBalance = Number(user.balance_usdt || 0);
     const currentWithdrawable = Number(user.withdrawable_usdt || 0);
     const currentEarnings = Number(user.earnings_balance_usdt || 0);
-
-    if (direction === 'debit') {
-      if (balanceType === 'recharge' && currentRecharge < amount) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ message: "El usuario no tiene suficiente saldo de recarga para descontar." });
-      }
-      if (balanceType === 'withdrawable' && currentWithdrawable < amount) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ message: "El usuario no tiene suficiente saldo retirable para descontar." });
-      }
-    }
+    if (direction === "debit" && balanceType === "recharge" && currentRecharge < amount) { await client.query("ROLLBACK"); return res.status(400).json({ message: "Saldo de garantía insuficiente." }); }
+    if (direction === "debit" && balanceType === "withdrawable" && currentWithdrawable < amount) { await client.query("ROLLBACK"); return res.status(400).json({ message: "Saldo retirable insuficiente." }); }
 
     let updateSql;
-    let ledgerBalanceType;
     let title;
-    if (balanceType === 'recharge') {
-      ledgerBalanceType = 'recharge';
-      title = direction === 'credit' ? 'Recarga manual admin' : 'Descuento manual de recarga';
-      updateSql = direction === 'credit'
-        ? `UPDATE users SET balance_usdt=COALESCE(balance_usdt,0)+$1, recharge_balance_usdt=COALESCE(recharge_balance_usdt,0)+$1 WHERE id=$2 RETURNING id,email,balance_usdt,recharge_balance_usdt,withdrawable_usdt,earnings_balance_usdt`
-        : `UPDATE users SET balance_usdt=GREATEST(COALESCE(balance_usdt,0)-$1,0), recharge_balance_usdt=COALESCE(recharge_balance_usdt,0)-$1 WHERE id=$2 RETURNING id,email,balance_usdt,recharge_balance_usdt,withdrawable_usdt,earnings_balance_usdt`;
+    if (balanceType === "recharge") {
+      title = direction === "credit" ? "Garantía manual admin" : "Descuento manual de garantía";
+      updateSql = direction === "credit"
+        ? `UPDATE users SET balance_usdt=COALESCE(balance_usdt,0)+$1,recharge_balance_usdt=COALESCE(recharge_balance_usdt,0)+$1 WHERE id=$2 RETURNING *`
+        : `UPDATE users SET balance_usdt=GREATEST(COALESCE(balance_usdt,0)-$1,0),recharge_balance_usdt=COALESCE(recharge_balance_usdt,0)-$1 WHERE id=$2 RETURNING *`;
     } else {
-      ledgerBalanceType = 'withdrawable';
-      title = direction === 'credit' ? 'Retirable manual admin' : 'Descuento manual de retirable';
-      updateSql = direction === 'credit'
-        ? `UPDATE users SET withdrawable_usdt=COALESCE(withdrawable_usdt,0)+$1, earnings_balance_usdt=COALESCE(earnings_balance_usdt,0)+$1 WHERE id=$2 RETURNING id,email,balance_usdt,recharge_balance_usdt,withdrawable_usdt,earnings_balance_usdt`
-        : `UPDATE users SET withdrawable_usdt=COALESCE(withdrawable_usdt,0)-$1, earnings_balance_usdt=GREATEST(COALESCE(earnings_balance_usdt,0)-$1,0) WHERE id=$2 RETURNING id,email,balance_usdt,recharge_balance_usdt,withdrawable_usdt,earnings_balance_usdt`;
+      title = direction === "credit" ? "Retirable manual admin" : "Descuento manual de retirable";
+      updateSql = direction === "credit"
+        ? `UPDATE users SET withdrawable_usdt=COALESCE(withdrawable_usdt,0)+$1,earnings_balance_usdt=COALESCE(earnings_balance_usdt,0)+$1 WHERE id=$2 RETURNING *`
+        : `UPDATE users SET withdrawable_usdt=COALESCE(withdrawable_usdt,0)-$1,earnings_balance_usdt=GREATEST(COALESCE(earnings_balance_usdt,0)-$1,0) WHERE id=$2 RETURNING *`;
     }
-
     const updated = await client.query(updateSql, [amount, userId]);
-    const ledger = await client.query(
-      `INSERT INTO account_ledger(user_id,balance_type,direction,type,title,amount_usdt,description,reference_type,reference_id,metadata,status)
-       VALUES ($1,$2,$3,'admin_balance_adjustment',$4,$5,$6,'admin_user',$7,$8::jsonb,'completed')
-       RETURNING id,created_at`,
-      [
-        userId,
-        ledgerBalanceType,
-        direction,
-        title,
-        amount,
-        reason || 'Ajuste manual realizado desde panel administrativo Royal Imperial AI.',
-        adminId,
-        JSON.stringify({
-          adminId,
-          balanceType,
-          direction,
-          previous: {
-            balance_usdt: currentBalance,
-            recharge_balance_usdt: currentRecharge,
-            withdrawable_usdt: currentWithdrawable,
-            earnings_balance_usdt: currentEarnings,
-          },
-        }),
-      ]
-    );
-
-    await client.query(
-      `INSERT INTO user_security_events(user_id,event_type,reason,created_by,metadata)
-       VALUES ($1,'ADMIN_BALANCE_ADJUSTMENT',$2,$3,$4::jsonb)`,
-      [userId, `${title}: ${amount} USDT.`, adminId, JSON.stringify({ balanceType, direction, amount, ledgerId: ledger.rows[0].id })]
-    ).catch(() => {});
-
-    if (balanceType === 'recharge' && direction === 'credit') {
-      await awardCreditPointMilestone(
-        client,
-        userId,
-        80,
-        "recharge_done",
-        "Primera recarga registrada por admin.",
-        { adminId, amountUsdt: amount, ledgerId: ledger.rows[0].id },
-        adminId
-      );
-    }
-
-    await client.query('COMMIT');
-    return res.json({
-      message: direction === 'credit' ? 'Saldo añadido correctamente.' : 'Saldo descontado correctamente.',
-      user: updated.rows[0],
-      ledgerId: ledger.rows[0].id,
-    });
+    const ledger = await client.query(`INSERT INTO account_ledger(user_id,balance_type,direction,type,title,amount_usdt,description,reference_type,reference_id,metadata,status) VALUES($1,$2,$3,'admin_balance_adjustment',$4,$5,$6,'admin_user',$7,$8::jsonb,'completed') RETURNING id`, [userId,balanceType,direction,title,amount,reason || "Ajuste manual desde panel administrativo.",adminId,JSON.stringify({ adminId,balanceType,direction,previous:{balance_usdt:currentBalance,recharge_balance_usdt:currentRecharge,withdrawable_usdt:currentWithdrawable,earnings_balance_usdt:currentEarnings} })]);
+    await client.query(`INSERT INTO user_security_events(user_id,event_type,reason,created_by,metadata) VALUES($1,'ADMIN_BALANCE_ADJUSTMENT',$2,$3,$4::jsonb)`, [userId,`${title}: ${amount} USDT.`,adminId,JSON.stringify({ balanceType,direction,amount,ledgerId:ledger.rows[0].id })]).catch(() => {});
+    await client.query("COMMIT");
+    return res.json({ message: "Saldo actualizado correctamente.", user: updated.rows[0] });
   } catch (error) {
-    await client.query('ROLLBACK').catch(() => {});
-    console.error('ADMIN BALANCE ADJUSTMENT ERROR:', error);
-    return res.status(500).json({ message: 'Error al ajustar saldo del usuario.', detail: error.message });
-  } finally {
-    client.release();
-  }
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("ADMIN BALANCE ADJUSTMENT ERROR:", error);
+    return res.status(500).json({ message: "Error al ajustar saldo.", detail: error.message });
+  } finally { client.release(); }
 }
 
 async function listAdminTasks(req, res) {
@@ -1475,6 +1588,12 @@ module.exports = {
   getAdminUserDetail,
   updateAdminUser,
   adjustAdminUserBalance,
+  updateAdminUserProfile,
+  saveAdminWithdrawalAccount,
+  deleteAdminWithdrawalAccount,
+  resetAdminUserPassword,
+  forceLogoutAdminUser,
+  getAdminUserActivity,
   listAdminTasks,
   createAdminTask,
   updateAdminTask,

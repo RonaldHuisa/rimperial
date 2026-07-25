@@ -106,6 +106,7 @@ function createToken(user) {
         {
             userId: user.id,
             email: user.email,
+            authVersion: Number(user.auth_version || 0),
         },
         process.env.JWT_SECRET,
         {
@@ -260,7 +261,7 @@ async function register(req, res) {
                 credit_points
             )
             VALUES ($1, $2, $3, $4, $5, $6, 50)
-            RETURNING id, email, referral_code, referred_by_id, is_admin, credit_points, created_at
+            RETURNING id, email, referral_code, referred_by_id, is_admin, credit_points, COALESCE(auth_version,0) AS auth_version, created_at
             `,
             [
                 email,
@@ -381,7 +382,7 @@ async function login(req, res) {
         const requestIp = getClientIp(req);
         const userResult = await pool.query(
             `
-      SELECT id, email, password_hash, referral_code, created_at, is_admin, is_banned, banned_reason, is_suspicious, suspicious_reason
+      SELECT id, email, password_hash, referral_code, created_at, is_admin, is_banned, banned_reason, is_suspicious, suspicious_reason, COALESCE(auth_version,0) AS auth_version
       FROM users
       WHERE email = $1
       `,
@@ -395,6 +396,12 @@ async function login(req, res) {
         }
 
         const user = userResult.rows[0];
+
+        if (user.is_banned) {
+            return res.status(403).json({
+                message: "Esta cuenta se encuentra bloqueada. Contacta con soporte.",
+            });
+        }
 
         const validPassword = await bcrypt.compare(password, user.password_hash);
 
