@@ -51,15 +51,28 @@ async function getAdminOverview(req, res) {
   try {
     await seedRoyalVipPackages(client);
 
-    const [users, balances, deposits, withdrawals, tasksToday, tasksWeek, questions, levels, recentUsers, recentDeposits, recentWithdrawals] = await Promise.all([
+    const [users, balances, deposits, withdrawals, taskActivity, questions, levels, upgrades] = await Promise.all([
       client.query(`
+        WITH clock AS (
+          SELECT
+            CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima' AS lima_now,
+            date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima') AS today_start
+        )
         SELECT
           COUNT(*)::int AS total_users,
           COUNT(*) FILTER (WHERE is_admin = true)::int AS total_admins,
           COUNT(*) FILTER (WHERE is_banned = true)::int AS banned_users,
           COUNT(*) FILTER (WHERE is_suspicious = true)::int AS suspicious_users,
-          COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours')::int AS new_users_24h,
-          COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days')::int AS new_users_7d
+          COUNT(*) FILTER (
+            WHERE created_at >= (SELECT lima_now FROM clock) - INTERVAL '24 hours'
+          )::int AS new_users_24h,
+          COUNT(*) FILTER (
+            WHERE created_at >= (SELECT lima_now FROM clock) - INTERVAL '7 days'
+          )::int AS new_users_7d,
+          COUNT(*) FILTER (
+            WHERE created_at >= (SELECT today_start FROM clock) - INTERVAL '1 day'
+              AND created_at < (SELECT today_start FROM clock)
+          )::int AS new_users_yesterday
         FROM users
       `),
       client.query(`
@@ -71,42 +84,88 @@ async function getAdminOverview(req, res) {
         FROM users
       `),
       client.query(`
+        WITH clock AS (
+          SELECT
+            CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima' AS lima_now,
+            date_trunc('day', CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima') AS today_start
+        ),
+        recharge_events AS (
+          SELECT d.amount_usdt, d.created_at
+          FROM deposits d
+          WHERE d.status = 'confirmed'
+            AND COALESCE(d.sweep_status, '') NOT IN ('manual', 'hidden_manual')
+            AND COALESCE(d.tx_hash, '') NOT LIKE 'manual_admin_recharge_%'
+            AND COALESCE(d.token_contract, '') <> 'manual-admin-credit'
+
+          UNION ALL
+
+          SELECT al.amount_usdt, al.created_at
+          FROM account_ledger al
+          WHERE al.type = 'admin_balance_adjustment'
+            AND al.balance_type = 'recharge'
+            AND al.direction = 'credit'
+            AND COALESCE(al.status, 'completed') = 'completed'
+        )
         SELECT
           COUNT(*)::int AS total_deposits,
           COALESCE(SUM(amount_usdt),0) AS total_deposited,
-          COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours')::int AS deposits_24h,
-          COALESCE(SUM(amount_usdt) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours'),0) AS deposited_24h,
-          COUNT(*) FILTER (WHERE status='confirmed')::int AS confirmed_deposits,
-          COUNT(*) FILTER (WHERE COALESCE(sweep_status,'pending') <> 'swept')::int AS pending_collection
-        FROM deposits
+          COUNT(*) FILTER (
+            WHERE created_at >= (SELECT lima_now FROM clock) - INTERVAL '7 days'
+          )::int AS deposits_7d,
+          COALESCE(SUM(amount_usdt) FILTER (
+            WHERE created_at >= (SELECT lima_now FROM clock) - INTERVAL '7 days'
+          ),0) AS deposited_7d,
+          COUNT(*) FILTER (
+            WHERE created_at >= (SELECT today_start FROM clock) - INTERVAL '1 day'
+              AND created_at < (SELECT today_start FROM clock)
+          )::int AS deposits_yesterday,
+          COALESCE(SUM(amount_usdt) FILTER (
+            WHERE created_at >= (SELECT today_start FROM clock) - INTERVAL '1 day'
+              AND created_at < (SELECT today_start FROM clock)
+          ),0) AS deposited_yesterday,
+          (
+            SELECT COUNT(*)::int
+            FROM deposits d
+            WHERE d.status = 'confirmed'
+              AND COALESCE(d.sweep_status, 'pending') <> 'swept'
+              AND COALESCE(d.sweep_status, '') NOT IN ('manual', 'hidden_manual')
+              AND COALESCE(d.tx_hash, '') NOT LIKE 'manual_admin_recharge_%'
+              AND COALESCE(d.token_contract, '') <> 'manual-admin-credit'
+          ) AS pending_collection
+        FROM recharge_events
       `),
       client.query(`
+        WITH clock AS (
+          SELECT CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima' AS lima_now
+        )
         SELECT
           COUNT(*)::int AS total_withdrawals,
           COUNT(*) FILTER (WHERE status='pending')::int AS pending_withdrawals,
           COUNT(*) FILTER (WHERE status='paid')::int AS paid_withdrawals,
           COALESCE(SUM(amount_requested),0) AS total_requested,
           COALESCE(SUM(amount_to_receive) FILTER (WHERE status='paid'),0) AS total_paid,
+          COALESCE(SUM(amount_to_receive) FILTER (
+            WHERE status='paid'
+              AND COALESCE(paid_at, created_at) >= (SELECT lima_now FROM clock) - INTERVAL '7 days'
+          ),0) AS paid_7d,
+          COUNT(*) FILTER (
+            WHERE status='paid'
+              AND COALESCE(paid_at, created_at) >= (SELECT lima_now FROM clock) - INTERVAL '7 days'
+          )::int AS paid_withdrawals_7d,
           COALESCE(SUM(amount_to_receive) FILTER (WHERE status='pending'),0) AS pending_amount
         FROM withdrawals
       `),
       client.query(`
         SELECT
-          COUNT(*)::int AS total_responses,
-          COALESCE(SUM(reward_usdt),0) AS total_rewards,
-          COALESCE(SUM(CASE WHEN is_correct THEN 1 ELSE 0 END),0)::int AS correct_responses
+          COUNT(*)::int AS responses_7d,
+          COUNT(*) FILTER (WHERE COALESCE(vip_level,0) = 0)::int AS trial_responses_7d,
+          COUNT(*) FILTER (WHERE COALESCE(vip_level,0) >= 1)::int AS plan_responses_7d,
+          COUNT(DISTINCT user_id) FILTER (WHERE COALESCE(vip_level,0) = 0)::int AS trial_active_users_7d,
+          COUNT(DISTINCT user_id) FILTER (WHERE COALESCE(vip_level,0) >= 1)::int AS plan_active_users_7d,
+          COALESCE(SUM(CASE WHEN is_correct THEN 1 ELSE 0 END),0)::int AS correct_responses_7d,
+          COALESCE(SUM(reward_usdt),0) AS rewards_7d
         FROM ai_task_responses
-        WHERE completed_at >= date_trunc('day', NOW())
-          AND completed_at < date_trunc('day', NOW()) + INTERVAL '1 day'
-      `),
-      client.query(`
-        SELECT
-          COUNT(*)::int AS total_responses,
-          COALESCE(SUM(reward_usdt),0) AS total_rewards,
-          COALESCE(SUM(CASE WHEN is_correct THEN 1 ELSE 0 END),0)::int AS correct_responses
-        FROM ai_task_responses
-        WHERE completed_at >= date_trunc('week', NOW())
-          AND completed_at < date_trunc('week', NOW()) + INTERVAL '7 days'
+        WHERE completed_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
       `),
       client.query(`
         SELECT
@@ -115,42 +174,84 @@ async function getAdminOverview(req, res) {
         FROM ai_task_questions
       `),
       client.query(`
-        SELECT p.level, p.name, p.price_usdt, p.daily_tasks, p.task_reward_usdt,
-          CASE WHEN p.level = 0 THEN (
-            SELECT COUNT(*)::int FROM users u
-            WHERE NOT EXISTS (
-              SELECT 1 FROM vip_purchases vp
-              WHERE vp.user_id = u.id AND vp.status='active' AND vp.expires_at > NOW() AND vp.level >= 1
+        SELECT
+          p.level,
+          p.name,
+          p.price_usdt,
+          p.daily_tasks,
+          p.task_reward_usdt,
+          CASE
+            WHEN p.level = 0 THEN (
+              SELECT COUNT(*)::int
+              FROM users u
+              WHERE NOT EXISTS (
+                SELECT 1
+                FROM vip_purchases vp
+                WHERE vp.user_id = u.id
+                  AND vp.status='active'
+                  AND vp.expires_at > NOW()
+                  AND vp.level >= 1
+              )
             )
-          ) ELSE COUNT(v.id)::int END AS active_users
+            ELSE COUNT(DISTINCT v.user_id)::int
+          END AS active_users
         FROM vip_packages p
-        LEFT JOIN vip_purchases v ON v.level = p.level AND v.status='active' AND v.expires_at > NOW()
+        LEFT JOIN vip_purchases v
+          ON v.level = p.level
+         AND v.status='active'
+         AND v.expires_at > NOW()
         GROUP BY p.level, p.name, p.price_usdt, p.daily_tasks, p.task_reward_usdt
         ORDER BY p.level ASC
       `),
-      client.query(`SELECT id,email,is_admin,is_banned,is_suspicious,created_at,withdrawable_usdt FROM users ORDER BY created_at DESC LIMIT 8`),
       client.query(`
-        SELECT d.id,d.amount_usdt,d.network,d.status,d.sweep_status,d.created_at,u.email
-        FROM deposits d JOIN users u ON u.id=d.user_id
-        ORDER BY d.created_at DESC LIMIT 8
-      `),
-      client.query(`
-        SELECT w.id,w.amount_requested,w.amount_to_receive,w.network,w.status,w.created_at,u.email
-        FROM withdrawals w JOIN users u ON u.id=w.user_id
-        ORDER BY w.created_at DESC LIMIT 8
+        WITH clock AS (
+          SELECT CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima' AS lima_now
+        ),
+        ordered_purchases AS (
+          SELECT
+            vp.id,
+            vp.user_id,
+            vp.level,
+            vp.purchased_at,
+            LAG(vp.level) OVER (
+              PARTITION BY vp.user_id
+              ORDER BY vp.purchased_at ASC, vp.id ASC
+            ) AS previous_level
+          FROM vip_purchases vp
+          WHERE vp.level >= 1
+            AND vp.status IN ('active','expired','completed','cancelled','replaced')
+        ),
+        upgrade_events AS (
+          SELECT *
+          FROM ordered_purchases
+          WHERE previous_level IS NOT NULL
+            AND level > previous_level
+        )
+        SELECT
+          COUNT(*)::int AS total_upgrade_events,
+          COUNT(DISTINCT user_id)::int AS total_upgrade_users,
+          COUNT(*) FILTER (
+            WHERE purchased_at >= (SELECT lima_now FROM clock) - INTERVAL '7 days'
+          )::int AS upgrade_events_7d,
+          COUNT(DISTINCT user_id) FILTER (
+            WHERE purchased_at >= (SELECT lima_now FROM clock) - INTERVAL '7 days'
+          )::int AS upgrade_users_7d
+        FROM upgrade_events
       `),
     ]);
 
-    const today = tasksToday.rows[0] || {};
-    const week = tasksWeek.rows[0] || {};
-    const weekTotal = intValue(week.total_responses);
-    const weekAccuracy = weekTotal ? Number(((intValue(week.correct_responses) / weekTotal) * 100).toFixed(2)) : 0;
-    const todayTotal = intValue(today.total_responses);
-    const todayAccuracy = todayTotal ? Number(((intValue(today.correct_responses) / todayTotal) * 100).toFixed(2)) : 0;
+    const activityRow = taskActivity.rows[0] || {};
+    const responseTotal = intValue(activityRow.responses_7d);
+    const activityAccuracy = responseTotal
+      ? Number(((intValue(activityRow.correct_responses_7d) / responseTotal) * 100).toFixed(2))
+      : 0;
 
     return res.json({
       stats: {
-        users: users.rows[0],
+        users: {
+          ...users.rows[0],
+          new_users_yesterday: intValue(users.rows[0]?.new_users_yesterday),
+        },
         balances: {
           totalBalance: money(balances.rows[0]?.total_balance),
           totalRechargeBalance: money(balances.rows[0]?.total_recharge_balance),
@@ -160,28 +261,43 @@ async function getAdminOverview(req, res) {
         deposits: {
           totalDeposits: intValue(deposits.rows[0]?.total_deposits),
           totalDeposited: money(deposits.rows[0]?.total_deposited),
-          deposits24h: intValue(deposits.rows[0]?.deposits_24h),
-          deposited24h: money(deposits.rows[0]?.deposited_24h),
-          confirmedDeposits: intValue(deposits.rows[0]?.confirmed_deposits),
+          deposits7d: intValue(deposits.rows[0]?.deposits_7d),
+          deposited7d: money(deposits.rows[0]?.deposited_7d),
+          depositsYesterday: intValue(deposits.rows[0]?.deposits_yesterday),
+          depositedYesterday: money(deposits.rows[0]?.deposited_yesterday),
           pendingCollection: intValue(deposits.rows[0]?.pending_collection),
         },
         withdrawals: {
           totalWithdrawals: intValue(withdrawals.rows[0]?.total_withdrawals),
           pendingWithdrawals: intValue(withdrawals.rows[0]?.pending_withdrawals),
           paidWithdrawals: intValue(withdrawals.rows[0]?.paid_withdrawals),
+          paidWithdrawals7d: intValue(withdrawals.rows[0]?.paid_withdrawals_7d),
           totalRequested: money(withdrawals.rows[0]?.total_requested),
           totalPaid: money(withdrawals.rows[0]?.total_paid),
+          paid7d: money(withdrawals.rows[0]?.paid_7d),
           pendingAmount: money(withdrawals.rows[0]?.pending_amount),
         },
+        activity: {
+          responses7d: responseTotal,
+          trialResponses7d: intValue(activityRow.trial_responses_7d),
+          planResponses7d: intValue(activityRow.plan_responses_7d),
+          trialActiveUsers7d: intValue(activityRow.trial_active_users_7d),
+          planActiveUsers7d: intValue(activityRow.plan_active_users_7d),
+          rewards7d: money(activityRow.rewards_7d),
+          accuracy7d: activityAccuracy,
+        },
         tasks: {
-          todayResponses: todayTotal,
-          todayRewards: money(today.total_rewards),
-          todayAccuracy,
-          weekResponses: weekTotal,
-          weekRewards: money(week.total_rewards),
-          weekAccuracy,
+          weekResponses: responseTotal,
+          weekRewards: money(activityRow.rewards_7d),
+          weekAccuracy: activityAccuracy,
           totalQuestions: intValue(questions.rows[0]?.total_questions),
           activeQuestions: intValue(questions.rows[0]?.active_questions),
+        },
+        upgrades: {
+          totalUpgradeEvents: intValue(upgrades.rows[0]?.total_upgrade_events),
+          totalUpgradeUsers: intValue(upgrades.rows[0]?.total_upgrade_users),
+          upgradeEvents7d: intValue(upgrades.rows[0]?.upgrade_events_7d),
+          upgradeUsers7d: intValue(upgrades.rows[0]?.upgrade_users_7d),
         },
       },
       levels: levels.rows.map((row) => ({
@@ -192,11 +308,8 @@ async function getAdminOverview(req, res) {
         taskRewardUsdt: money(row.task_reward_usdt),
         activeUsers: intValue(row.active_users),
       })),
-      recent: {
-        users: recentUsers.rows,
-        deposits: recentDeposits.rows,
-        withdrawals: recentWithdrawals.rows,
-      },
+      generatedAt: new Date().toISOString(),
+      timezone: 'GMT-5',
     });
   } catch (error) {
     console.error("ADMIN OVERVIEW ERROR:", error);
