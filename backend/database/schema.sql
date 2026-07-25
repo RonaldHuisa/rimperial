@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS users (
   withdraw_enabled_at TIMESTAMP WITHOUT TIME ZONE,
   withdraw_enabled_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   withdraw_enabled_note TEXT,
+  auth_version INTEGER DEFAULT 0 NOT NULL,
   is_admin BOOLEAN DEFAULT FALSE NOT NULL,
   vip_level INTEGER DEFAULT 0 NOT NULL,
   vip_purchased_at TIMESTAMP WITHOUT TIME ZONE,
