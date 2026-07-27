@@ -50,6 +50,8 @@ const allowedOrigins = Array.from(new Set([
   "https://www.royalimperial.lat",
   "https://royalimperial.lat",
   "https://www.royalimperial.lat",
+  "https://royalimperial.vip",
+  "https://www.royalimperial.vip",
   process.env.FRONTEND_URL,
   ...parseOriginList(process.env.ALLOWED_ORIGINS),
 ].map(normalizeOrigin).filter(Boolean)));
